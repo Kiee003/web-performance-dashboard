@@ -43,7 +43,9 @@ actionable recommendations.
 
 ## Screenshots
 
-> Add your screenshots here
+![Dashboard](screenshots/C1.jpg)
+![AI Analysis](screenshots/C4_2.jpg)
+![Comparison](screenshots/F1-F2.jpg)
 
 ---
 
