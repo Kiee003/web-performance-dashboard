@@ -43,9 +43,9 @@ actionable recommendations.
 
 ## Screenshots
 
-![Dashboard](screenshots/C1.jpg)
-![AI Analysis](screenshots/C4_2.jpg)
-![Comparison](screenshots/F1-F2.jpg)
+![Dashboard](screenshot/C1.jpg)
+![AI Analysis](screenshot/C4_2.jpg)
+![Comparison](screenshot/F1-F2.jpg)
 
 ---
 
