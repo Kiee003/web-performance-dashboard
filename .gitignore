@@ -1,18 +1,17 @@
-# Dependencies
-node_modules/
-package-lock.json
-
 # Environment variables
-.env
+server/.env
+
+# Database
+server/data/audit_history.db
+server/*.db
+
+# Node modules
+node_modules/
+server/node_modules/
+client/node_modules/
 
 # Build files
-dist/
-build/
+client/build/
 
 # Logs
 *.log
-npm-debug.log*
-
-# OS files
-.DS_Store
-Thumbs.db
