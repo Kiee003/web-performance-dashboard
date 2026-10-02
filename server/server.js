@@ -1,88 +1,107 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Web Performance Dashboard — API server entry point.
+//
+//   npm start      → run the server
+//   npm run dev    → run with auto-restart on file changes (nodemon)
+//
+// Settings live in server/.env and are loaded by config.js.
+// ─────────────────────────────────────────────────────────────────────────────
+const fs = require('fs');
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
-const path = require('path');
-const database = require('./database');
 
-dotenv.config({ path: path.resolve(__dirname, '.env') });
-
-const auditRoutes = require('./routes/auditRoutes');
-const authRoutes = require('./routes/authRoutes');
+const config = require('./config');
+const database = require('./db/database');
+const chromeSession = require('./services/chromeSession');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
 
-// ─── PUBLIC ROUTES ────────────────────────────────────────────────────────────
+// ─── API ROUTES ──────────────────────────────────────────────────────────────
+// Public:     /api/test, /api/health, /api/auth/login, /api/auth/register
+// Protected:  everything else (each route checks the login token itself)
+app.use('/api',      require('./routes/system'));
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api',      require('./routes/audit'));
+app.use('/api',      require('./routes/export'));
+app.use('/api',      require('./routes/compare'));
+app.use('/api',      require('./routes/crawler'));
 
-app.get('/', (req, res) => {
-    res.json({
-        message: 'Web Performance Dashboard API',
-        version: '2.0.0',
-        endpoints: {
-            auth: '/api/auth/login, /api/auth/register',
-            audit: '/api/audit (POST, requires auth)',
-            test: '/api/test'
-        }
+// Unknown /api/... paths get a JSON 404 instead of the React page
+app.use('/api', (req, res) => {
+    res.status(404).json({ success: false, error: `Not found: ${req.method} ${req.originalUrl}` });
+});
+
+// ─── FRONTEND ────────────────────────────────────────────────────────────────
+// In production (NODE_ENV=production) this server also serves the built React
+// app, so the whole dashboard runs from one address. In development the React
+// dev server (npm start in client/) serves the frontend instead.
+const hasClientBuild = fs.existsSync(path.join(config.clientBuildDir, 'index.html'));
+
+if (config.isProduction && hasClientBuild) {
+    app.use(express.static(config.clientBuildDir));
+    app.get('/{*splat}', (req, res) => {
+        res.sendFile(path.join(config.clientBuildDir, 'index.html'));
     });
+} else {
+    app.get('/', (req, res) => {
+        res.json({
+            message: 'Web Performance Dashboard API',
+            version: '2.1.0',
+            note: 'Open the dashboard at http://localhost:3000 (React dev server)',
+            check: '/api/test'
+        });
+    });
+}
+
+// ─── START ───────────────────────────────────────────────────────────────────
+const server = app.listen(config.port, (err) => {
+    // Express 5 passes listen errors to this callback instead of throwing
+    if (err) {
+        console.error('=================================');
+        console.error(`❌ SERVER FAILED TO START on port ${config.port}`);
+        console.error(`   ${err.code || ''} ${err.message}`);
+        if (err.code === 'EADDRINUSE') {
+            console.error('   Another program is already using this port.');
+            console.error(`   Find it with: netstat -ano | findstr :${config.port}`);
+        } else if (err.code === 'EACCES') {
+            console.error('   Windows has reserved this port (Hyper-V / WSL / Docker).');
+            console.error('   Pick another PORT in server/.env, or check reserved ranges with:');
+            console.error('   netsh interface ipv4 show excludedportrange protocol=tcp');
+        }
+        console.error('=================================');
+        process.exit(1);
+    }
+
+    console.log('=================================');
+    console.log('SERVER STARTED SUCCESSFULLY!');
+    console.log('=================================');
+    console.log(`API:        http://localhost:${config.port}/api`);
+    if (config.isProduction && hasClientBuild) {
+        console.log(`Dashboard:  http://localhost:${config.port}`);
+    } else {
+        console.log('Dashboard:  http://localhost:3000  (run the client too)');
+    }
+    console.log('=================================');
+
+    // Remove Chrome profile folders left behind by earlier runs (in background)
+    chromeSession.sweepLeftoverProfiles();
 });
 
-app.get('/api/test', (req, res) => {
-    res.json({ status: 'success', message: 'Server is working!', time: new Date().toLocaleString() });
-});
-
-// ─── AUTH ROUTES (public — login/register don't need a token) ─────────────────
-app.use('/api/auth', authRoutes);
-
-// ─── PROTECTED ROUTES (all audit routes require a valid token) ────────────────
-// NOTE: Open auditRoutes.js and add the following at the top of each route handler:
-//
-//   const { verifyToken, requireMinRole } = require('../authMiddleware');
-//
-// Then protect routes like this:
-//   router.post('/audit', verifyToken, async (req, res) => { ... })
-//   router.get('/history', verifyToken, async (req, res) => { ... })
-//   router.delete('/audit/:id', verifyToken, requireMinRole('moderator'), async (req, res) => { ... })
-//
-// And pass req.user.id when saving audits:
-//   database.saveAudit(auditData, req.user.id);
-//
-// For history, pass req.user.id for normal users, null for moderator/admin (to see all):
-//   const userId = req.user.role === 'normal' ? req.user.id : null;
-//   database.getAuditHistory(url, 10, userId);
-
-// ─── AUDIT ROUTES (protected, Windows) ─────────────────────────────────────────────────
-app.use('/api', auditRoutes); 
-
-// ─── SERVE REACT FRONTEND (Linux) ──────────────────────────────────────────────────────
-/* app.use(express.static(path.join(__dirname, '../client/build')));
-
-app.get('/{*splat}', (req, res) => {
-    res.sendFile(path.join(__dirname, '../client/build', 'index.html'));
-}); */
-
-// ─── GRACEFUL SHUTDOWN ────────────────────────────────────────────────────────
-
+// ─── GRACEFUL SHUTDOWN ───────────────────────────────────────────────────────
 const gracefulShutdown = async () => {
     console.log('\n🛑 Shutting down gracefully...');
+    await chromeSession.closeAll();   // don't leave headless Chrome running
     database.closeDatabase();
     server.close(() => {
         console.log('✅ HTTP server closed');
         process.exit(0);
     });
-    setTimeout(() => { process.exit(1); }, 10000);
+    setTimeout(() => process.exit(1), 10000);
 };
 
 process.on('SIGINT', gracefulShutdown);
 process.on('SIGTERM', gracefulShutdown);
-
-const server = app.listen(PORT, () => {
-    console.log('=================================');
-    console.log('SERVER STARTED SUCCESSFULLY!');
-    console.log('=================================');
-    console.log(`Listening on: http://localhost:${PORT}`);
-    console.log(`Auth endpoints: http://localhost:${PORT}/api/auth/login`);
-    console.log('=================================');
-});
