@@ -1,0 +1,19 @@
+{
+  "name": "web-performance-dashboard",
+  "version": "2.1.0",
+  "private": true,
+  "description": "Web Performance Dashboard using Google Lighthouse with DeepSeek AI \u2014 Final Year Project",
+  "author": "Muhammad Alif Marzuki bin Rizuan",
+  "scripts": {
+    "setup": "npm install && npm install --prefix server && npm install --prefix client",
+    "dev": "concurrently -k -n server,client -c blue,magenta \"npm run dev --prefix server\" \"node scripts/wait-for-server.js && npm start --prefix client\"",
+    "dev:server": "npm run dev --prefix server",
+    "dev:client": "npm start --prefix client",
+    "build": "npm run build --prefix client",
+    "prod": "npm run build && cross-env NODE_ENV=production npm start --prefix server"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5",
+    "cross-env": "^10.1.0"
+  }
+}
