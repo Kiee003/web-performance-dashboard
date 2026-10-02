@@ -69,6 +69,10 @@ A web dashboard that runs **Google Lighthouse** performance audits on any websit
 4. The metrics go to DeepSeek, which returns a summary and recommendations. If the call fails or takes longer than 30 s, a metrics-based fallback is used.
 5. The result is saved to SQLite under the user's account and sent back to the dashboard.
 
+![Dashboard](screenshot/C1.jpg)
+![AI Analysis](screenshot/C4_2.jpg)
+![Comparison](screenshot/F1-F2.jpg)
+
 ## Project structure
 
 ```
@@ -305,3 +309,8 @@ The project is organised so each feature has a clear home. For example, adding a
 - Results vary between runs of the same URL depending on network conditions, website load and machine speed.
 - SQLite and the in-memory audit queue mean the app is designed for one server process. Queued audits are lost if the server restarts.
 - Audits run one at a time, so several users auditing at once wait in line.
+
+Muhammad Alif Marzuki Bin Rizuan
+Final Year Project — Bachelor of Computer Science (Hons.) Computer Networks
+Universiti Teknologi MARA Cawangan Melaka Kampus Jasin
+Supervisor: Shahadan Bin Saad
