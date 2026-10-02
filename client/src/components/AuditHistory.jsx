@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { getAuditHistory, getTrendData } from '../services/api';
 import PerformanceChart from './PerformanceChart';
+import ReportButtons from './ReportButtons';
+import { ReliabilityBadge } from './ReliabilityNotice';
+import { formatSeconds, formatCls, formatScore } from '../utils/metrics';
+import './AuditHistory.css';
 
 // Bar chart icon — Performance Chart section
 const ChartIcon = () => (
@@ -20,16 +24,9 @@ const HistoryIcon = () => (
     </svg>
 );
 
-const sectionTitleStyle = {
-    margin: 0,
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    color: '#333',
-    fontSize: '1.05rem',
-};
-
-const AuditHistory = ({ url }) => {
+// formFactor: only show audits made with the same device setting, because
+// mobile and desktop results are not comparable.
+const AuditHistory = ({ url, formFactor = null }) => {
     const [history, setHistory] = useState([]);
     const [totalCount, setTotalCount] = useState(0);
     const [loading, setLoading] = useState(false);
@@ -43,8 +40,8 @@ const AuditHistory = ({ url }) => {
         setError(null);
         try {
             const [historyRes, trendRes] = await Promise.all([
-                getAuditHistory(url, 10),
-                getTrendData(url, 10).catch(err => {
+                getAuditHistory(url, 10, formFactor),
+                getTrendData(url, 10, formFactor).catch(err => {
                     console.error('Failed to load trend data:', err);
                     return { success: false };
                 }),
@@ -63,7 +60,7 @@ const AuditHistory = ({ url }) => {
         } finally {
             setLoading(false);
         }
-    }, [url]);
+    }, [url, formFactor]);
 
     useEffect(() => {
         loadHistory();
@@ -72,89 +69,93 @@ const AuditHistory = ({ url }) => {
     const formatDate = (dateString) => new Date(dateString).toLocaleString();
 
     const getScoreStyle = (score) => {
+        if (score === null || score === undefined) return { color: '#888', fontWeight: 'bold' };
         if (score >= 90) return { color: '#28a745', fontWeight: 'bold' };
         if (score >= 50) return { color: '#ffc107', fontWeight: 'bold' };
         return { color: '#dc3545', fontWeight: 'bold' };
     };
 
     if (loading && history.length === 0) {
-        return <div style={{ textAlign: 'center', padding: '20px' }}>Loading history...</div>;
+        return <div className="history__state">Loading history...</div>;
     }
 
     if (error) {
-        return <div style={{ color: '#dc3545', padding: '20px', textAlign: 'center' }}>{error}</div>;
+        return <div className="history__state history__state--error">{error}</div>;
     }
 
     if (history.length === 0) {
-        return <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>No previous audits for this URL</div>;
+        return <div className="history__state">No previous audits for this URL</div>;
     }
 
+    const metricCells = (audit) => [
+        ['LCP',  formatSeconds(audit.lcp)],
+        ['FCP',  formatSeconds(audit.fcp)],
+        ['CLS',  formatCls(audit.cls)],
+        ['TBT',  formatSeconds(audit.tbt)],
+        ['SI',   formatSeconds(audit.speed_index)],
+        ['Runs', audit.runs || '–'],
+    ];
+
     return (
-        <div style={{ marginTop: '30px', padding: '20px', background: '#f8f9fa', borderRadius: '10px' }}>
+        <div className="history">
 
             {/* ── Performance Chart ─────────────────────────────────────── */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-                <h3 style={sectionTitleStyle}>
+            <div className="history__head">
+                <h3 className="history__title">
                     <ChartIcon />
                     Performance Chart
                 </h3>
-                <span style={{
-                    fontSize: '12px',
-                    color: '#555',
-                    background: '#eee',
-                    padding: '5px 12px',
-                    borderRadius: '14px',
-                    fontWeight: '600',
-                    whiteSpace: 'nowrap',
-                }}>
-                    {totalCount} total audit{totalCount !== 1 ? 's' : ''}
+                <span className="history__count">
+                    {totalCount} {formFactor ? `${formFactor} ` : ''}audit{totalCount !== 1 ? 's' : ''}
                     {totalCount > history.length && (
-                        <span style={{ fontWeight: '400', marginLeft: '4px' }}>(showing latest {history.length})</span>
+                        <span className="history__count-note">(showing latest {history.length})</span>
                     )}
                 </span>
             </div>
 
             {trendData && (
-                <PerformanceChart trendData={trendData} title={`Performance Trend for ${url}`} />
+                <PerformanceChart trendData={trendData} title={`Performance Trend for ${url}${formFactor ? ` (${formFactor})` : ''}`} />
             )}
 
-            {/* ── History ───────────────────────────────────────────────── */}
-            <h3 style={{ ...sectionTitleStyle, marginTop: '28px', marginBottom: '12px' }}>
+            {/* ── History — a table on wide screens, cards on phones ────── */}
+            <h3 className="history__title history__title--list">
                 <HistoryIcon />
                 Audited Website History
             </h3>
 
-            <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', background: 'white', borderRadius: '8px', overflow: 'hidden' }}>
+            <div className="history__table-wrap">
+                <table className="history__table">
                     <thead>
-                        <tr style={{ background: '#f1f3f5' }}>
-                            <th style={{ padding: '12px 10px', textAlign: 'center', width: '55px', color: '#888', fontSize: '12px', fontWeight: '600' }}>ID</th>
-                            <th style={{ padding: '12px', textAlign: 'left' }}>Date</th>
-                            <th style={{ padding: '12px', textAlign: 'center' }}>Score</th>
-                            <th style={{ padding: '12px', textAlign: 'center' }}>LCP</th>
-                            <th style={{ padding: '12px', textAlign: 'center' }}>FCP</th>
-                            <th style={{ padding: '12px', textAlign: 'center' }}>CLS</th>
-                            <th style={{ padding: '12px', textAlign: 'center' }}>TBT</th>
-                            <th style={{ padding: '12px', textAlign: 'center' }}>Requests</th>
+                        <tr>
+                            <th className="history__th-id">ID</th>
+                            <th className="history__th-date">Date</th>
+                            <th>Score</th>
+                            <th>LCP</th>
+                            <th>FCP</th>
+                            <th>CLS</th>
+                            <th>TBT</th>
+                            <th>SI</th>
+                            <th>Runs</th>
+                            <th>Report</th>
                         </tr>
                     </thead>
                     <tbody>
                         {history.map((audit) => (
-                            <tr key={audit.id} style={{ borderBottom: '1px solid #eee' }}>
-                                <td style={{ padding: '12px 10px', textAlign: 'center', color: '#aaa', fontSize: '12px', fontWeight: '600', whiteSpace: 'nowrap' }} title="Audit ID — use this to compare by Audit ID">
-                                    #{audit.id}
-                                </td>
-                                <td style={{ padding: '12px' }}>{formatDate(audit.created_at)}</td>
-                                <td style={{ padding: '12px', textAlign: 'center' }}>
+                            <tr key={audit.id}>
+                                <td className="history__id" title="Audit ID — use this to compare by Audit ID">#{audit.id}</td>
+                                <td className="history__date">{formatDate(audit.created_at)}</td>
+                                <td className="history__score">
                                     <span style={getScoreStyle(audit.performance_score)}>
-                                        {audit.performance_score}/100
+                                        {formatScore(audit.performance_score)}
                                     </span>
+                                    {audit.reliability && audit.reliability !== 'ok' && <ReliabilityBadge level={audit.reliability} />}
                                 </td>
-                                <td style={{ padding: '12px', textAlign: 'center' }}>{(audit.lcp / 1000).toFixed(2)}s</td>
-                                <td style={{ padding: '12px', textAlign: 'center' }}>{(audit.fcp / 1000).toFixed(2)}s</td>
-                                <td style={{ padding: '12px', textAlign: 'center' }}>{audit.cls?.toFixed(3) || '0.000'}</td>
-                                <td style={{ padding: '12px', textAlign: 'center' }}>{(audit.tbt / 1000).toFixed(2)}s</td>
-                                <td style={{ padding: '12px', textAlign: 'center' }}>{audit.requests}</td>
+                                {metricCells(audit).map(([label, value]) => (
+                                    <td key={label} className="history__metric" data-label={label}>{value}</td>
+                                ))}
+                                <td className="history__report">
+                                    {audit.has_report ? <ReportButtons auditId={audit.id} hasReport compact /> : <span className="history__none">–</span>}
+                                </td>
                             </tr>
                         ))}
                     </tbody>
@@ -164,4 +165,4 @@ const AuditHistory = ({ url }) => {
     );
 };
 
-export default AuditHistory;
+export default AuditHistory;

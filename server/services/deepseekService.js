@@ -103,31 +103,58 @@ The recommendations array should contain ONLY issues that are actually present i
         }
     }
 
-    createDetailedPrompt(metrics, url) {
-        const score = metrics.scores?.performance || 0;
-        const lcp = (metrics.metrics?.lcp || 0) / 1000;
-        const fcp = (metrics.metrics?.fcp || 0) / 1000;
-        const cls = metrics.metrics?.cls || 0;
-        const tbt = (metrics.metrics?.tbt || 0) / 1000;
-        const requests = metrics.requests?.total || 0;
+    createDetailedPrompt(result, url) {
+        const score = result.scores?.performance;
+        const m = result.metrics || {};
+        const st = result.settings || {};
+        const rel = result.reliability || { level: 'ok', notes: [] };
 
-        let rating = '';
-        if (score >= 90) rating = 'Excellent';
-        else if (score >= 70) rating = 'Good';
-        else if (score >= 50) rating = 'Average';
-        else if (score >= 30) rating = 'Poor';
-        else rating = 'Critical';
+        // null = Lighthouse could not measure it — say so, never invent a number
+        const secs = (ms) => (ms === null || ms === undefined ? 'NOT MEASURED' : `${(ms / 1000).toFixed(2)}s`);
+        const clsTxt = m.cls === null || m.cls === undefined ? 'NOT MEASURED' : m.cls.toFixed(3);
+
+        let rating = 'Unknown';
+        if (score !== null && score !== undefined) {
+            if (score >= 90) rating = 'Excellent';
+            else if (score >= 70) rating = 'Good';
+            else if (score >= 50) rating = 'Average';
+            else if (score >= 30) rating = 'Poor';
+            else rating = 'Critical';
+        }
+
+        const device = st.formFactor === 'desktop'
+            ? 'Desktop (fast connection, no CPU slowdown)'
+            : 'Mobile (simulated slow 4G network and 4x slower CPU — the same as PageSpeed Insights)';
+
+        const runsTxt = (result.runs?.count || 1) > 1
+            ? `Median of ${result.runs.count} runs (individual scores: ${result.runs.scores.join(', ')})`
+            : 'Single run';
+
+        let reliabilityTxt = '';
+        if (rel.level !== 'ok') {
+            reliabilityTxt = `
+
+DATA RELIABILITY: ${rel.level.toUpperCase()}
+${rel.notes.map(n => '- ' + n).join('\n')}
+${rel.level === 'unreliable'
+    ? 'IMPORTANT: Do NOT present the affected values as real visitor experience. State clearly that they are a measurement problem, explain the likely cause from the notes above, and base your advice only on the trustworthy metrics. Your first recommendation must be about fixing the measurement (for example re-testing a production build).'
+    : 'Mention this caveat briefly where relevant.'}`;
+        }
 
         return `Here are the real Lighthouse audit results for ${url}:
 
-Performance Score: ${score}/100 (${rating})
-Largest Contentful Paint (LCP): ${lcp.toFixed(2)}s — target under 2.5s
-First Contentful Paint (FCP): ${fcp.toFixed(2)}s — target under 1.8s
-Cumulative Layout Shift (CLS): ${cls.toFixed(3)} — target under 0.1
-Total Blocking Time (TBT): ${tbt.toFixed(2)}s — target under 0.3s
-Total Network Requests: ${requests} — target under 50
+Test conditions: ${device}. ${runsTxt}. Lighthouse ${st.lighthouseVersion || 'unknown'}.
 
-Analyse these results honestly. Only flag metrics that are actually failing their targets. If the site does well on something, acknowledge it. Be specific to these exact numbers.`;
+Performance Score: ${score ?? 'NOT AVAILABLE'}/100 (${rating})
+Largest Contentful Paint (LCP): ${secs(m.lcp)} — target under 2.5s
+First Contentful Paint (FCP): ${secs(m.fcp)} — target under 1.8s
+Speed Index: ${secs(m.si)} — target under 3.4s
+Cumulative Layout Shift (CLS): ${clsTxt} — target under 0.1
+Total Blocking Time (TBT): ${secs(m.tbt)} — target under 0.2s
+Server response time (TTFB): ${secs(m.ttfb)} — target under 0.6s
+Total Network Requests: ${result.requests?.total ?? 'NOT MEASURED'} — guideline under 50${reliabilityTxt}
+
+Analyse these results honestly. Only flag metrics that are actually failing their targets. Metrics marked NOT MEASURED must not be discussed as if they had a value. If the site does well on something, acknowledge it. Be specific to these exact numbers.`;
     }
 
     parseAIResponse(aiContent) {
@@ -169,13 +196,15 @@ Analyse these results honestly. Only flag metrics that are actually failing thei
         }
     }
 
-    getIntelligentFallback(metrics) {
-        const score = metrics.scores?.performance || 0;
-        const lcp = (metrics.metrics?.lcp || 0) / 1000;
-        const fcp = (metrics.metrics?.fcp || 0) / 1000;
-        const cls = metrics.metrics?.cls || 0;
-        const tbt = (metrics.metrics?.tbt || 0) / 1000;
-        const requests = metrics.requests?.total || 0;
+    getIntelligentFallback(result) {
+        const score = result.scores?.performance ?? 0;
+        const m = result.metrics || {};
+        // Missing values are treated as "not failing" so no advice is invented for them
+        const lcp = (m.lcp ?? 0) / 1000;
+        const cls = m.cls ?? 0;
+        const tbt = (m.tbt ?? 0) / 1000;
+        const requests = result.requests?.total ?? 0;
+        const reliability = result.reliability || { level: 'ok', notes: [] };
 
         let summary = '';
         let verdict = '';
@@ -195,8 +224,29 @@ Analyse these results honestly. Only flag metrics that are actually failing thei
             verdict = 'This site is critically slow — most visitors will leave before it finishes loading.';
         }
 
+        if (reliability.level === 'warning') {
+            summary += `\n\nNote: ${reliability.notes.join(' ')}`;
+        }
+
+        // When the measurement itself is unreliable, say so before anything else
+        if (reliability.level === 'unreliable') {
+            summary = `Some of these results could not be measured reliably, so they should not be read as what real visitors experience. ${reliability.notes.join(' ')} Re-test before acting on the numbers — ideally against a production build of the site.\n\n` + summary;
+            verdict = 'The measurement for this page is unreliable — re-test before drawing conclusions.';
+            recommendations.push({
+                issue: 'Measurement is unreliable',
+                severity: 'warning',
+                plainEnglish: 'Lighthouse could not measure this page cleanly, so some numbers are distorted.',
+                simpleSuggestion: 'Re-run the audit against a production build, with several runs, and compare with the full Lighthouse report.',
+                actionItems: [
+                    'Build the site for production (e.g. npm run build) instead of using a development server',
+                    'Run the audit again with 3 or 5 runs',
+                    'Open the full Lighthouse report to see which request or element caused the problem'
+                ]
+            });
+        }
+
         // Only add recommendations for metrics that are actually failing
-        if (lcp > 2.5) {
+        if (lcp > 2.5 && reliability.level !== 'unreliable') {
             recommendations.push({
                 issue: `Main content loads in ${lcp.toFixed(1)}s`,
                 severity: lcp > 4 ? 'critical' : 'warning',
@@ -226,7 +276,7 @@ Analyse these results honestly. Only flag metrics that are actually failing thei
             });
         }
 
-        if (tbt > 0.3) {
+        if (tbt > 0.2) {
             recommendations.push({
                 issue: `Page is unresponsive for ${tbt.toFixed(1)}s`,
                 severity: tbt > 1 ? 'critical' : 'warning',

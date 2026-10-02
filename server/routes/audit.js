@@ -9,70 +9,106 @@ const config = require('../config');
 const database = require('../db/database');
 const lighthouseService = require('../services/lighthouseService');
 const auditQueue = require('../services/auditQueue');
+const reportStore = require('../services/reportStore');
 const { verifyToken, requireMinRole } = require('../middleware/auth');
 const { isValidUrl } = require('../utils/url');
 const { canAccessAudit } = require('../utils/access');
+const { sec, cls3 } = require('../utils/format');
+
+// Allowed audit options (anything else is rejected)
+const FORM_FACTORS = ['mobile', 'desktop'];
+const RUN_COUNTS = [1, 3, 5];
 
 // ── RUN AUDIT — all authenticated users ──────────────────────────────────────
+// Body: { url, formFactor?: 'mobile'|'desktop', runs?: 1|3|5 }
 router.post('/audit', verifyToken, async (req, res) => {
-    console.log('📨 ========================================');
-    console.log('📨 Received audit request');
-    console.log('📨 URL:', req.body.url);
-    console.log('📨 User:', req.user.email, `(${req.user.role})`);
-    console.log('📨 ========================================');
+    const { url } = req.body;
+    const formFactor = req.body.formFactor || 'mobile';
+    const runs = parseInt(req.body.runs, 10) || 1;
+
+    console.log(`📨 Audit request from ${req.user.email} (${req.user.role}): ${url}`);
+
+    if (!url) {
+        return res.status(400).json({ success: false, error: 'URL is required' });
+    }
+    if (!isValidUrl(url)) {
+        return res.status(400).json({ success: false, error: 'Invalid URL. Must start with http:// or https://' });
+    }
+    if (!FORM_FACTORS.includes(formFactor)) {
+        return res.status(400).json({ success: false, error: `formFactor must be one of: ${FORM_FACTORS.join(', ')}` });
+    }
+    if (!RUN_COUNTS.includes(runs)) {
+        return res.status(400).json({ success: false, error: `runs must be one of: ${RUN_COUNTS.join(', ')}` });
+    }
+
+    // Each Lighthouse run gets its own time budget
+    const timeoutMs = config.auditTimeoutMs * runs;
 
     try {
-        const { url } = req.body;
+        const { result, lhr } = await Promise.race([
+            auditQueue.add(url, (auditUrl) => lighthouseService.runAudit(auditUrl, { formFactor, runs })),
+            new Promise((_, reject) => setTimeout(
+                () => reject(new Error(`timeout after ${Math.round(timeoutMs / 1000)} seconds`)), timeoutMs)),
+        ]);
 
-        if (!url) {
-            return res.status(400).json({ success: false, error: 'URL is required' });
-        }
-        if (!isValidUrl(url)) {
-            return res.status(400).json({
-                success: false,
-                error: 'Invalid URL. Must start with http:// or https://'
-            });
-        }
-
-        console.log('✅ URL validated:', url);
-
-        const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error(`Request timeout after ${config.auditTimeoutMs / 1000} seconds`)), config.auditTimeoutMs);
-        });
-
-        const auditPromise = auditQueue.add(url, (auditUrl) => lighthouseService.runAudit(auditUrl));
-
-        const results = await Promise.race([auditPromise, timeoutPromise]);
-
-        // Only successful audits (score above 0) are saved to history
-        if (results && results.scores && results.scores.performance > 0) {
+        // Save every audit Lighthouse could score — including ones flagged as
+        // unreliable, so the warning stays attached to the record.
+        if (result.scores.performance !== null) {
             try {
-                const savedId = database.saveAudit(results, req.user.id);
-                results.id = savedId;
-                console.log(`💾 Audit saved for user: ${req.user.email} (ID: ${savedId})`);
+                result.id = database.saveAudit(result, req.user.id);
+                try {
+                    reportStore.save(result.id, lhr);
+                    database.markReportSaved(result.id);
+                    result.hasReport = true;
+                } catch (reportError) {
+                    console.log('⚠️ Could not save Lighthouse report:', reportError.message);
+                }
             } catch (dbError) {
                 console.log('⚠️ Database save failed:', dbError.message);
             }
         }
 
-        console.log('📤 Sending results to client');
-        res.json({ success: true, data: results });
+        res.json({ success: true, data: result });
 
     } catch (error) {
         console.error('❌ Audit failed:', error.message);
         if (error.message.includes('timeout')) {
-            res.status(504).json({
+            return res.status(504).json({
                 success: false,
-                error: 'The audit took too long to complete. Please try again later.'
-            });
-        } else {
-            res.status(500).json({
-                success: false,
-                error: error.message || 'Failed to run performance audit'
+                error: 'The audit took too long to complete. Try fewer runs, or check that the site responds.'
             });
         }
+        // AuditError messages are written for users; anything else is generic
+        const status = error.name === 'AuditError' ? 422 : 500;
+        res.status(status).json({
+            success: false,
+            error: error.name === 'AuditError' ? error.message : `Audit failed: ${error.message}`
+        });
     }
 });
+
+// ── FULL LIGHTHOUSE REPORT — the original report Lighthouse generated ────────
+// GET /api/audit/:id/report        → HTML report (view in browser)
+// GET /api/audit/:id/report.json   → raw Lighthouse result (Lighthouse Viewer)
+function sendReport(format) {
+    return (req, res) => {
+        const audit = database.getAuditById(parseInt(req.params.id));
+        if (!audit) return res.status(404).json({ success: false, error: 'Audit not found' });
+        if (!canAccessAudit(audit, req.user)) {
+            return res.status(403).json({ success: false, error: 'You do not have access to this audit' });
+        }
+        if (!reportStore.exists(audit.id)) {
+            return res.status(404).json({ success: false, error: 'No Lighthouse report was saved for this audit (audits made before reports were added do not have one).' });
+        }
+        if (format === 'json') {
+            res.setHeader('Content-Disposition', `attachment; filename=lighthouse_audit_${audit.id}.json`);
+            return res.sendFile(reportStore.jsonPath(audit.id));
+        }
+        res.sendFile(reportStore.htmlPath(audit.id));
+    };
+}
+router.get('/audit/:id/report', verifyToken, sendReport('html'));
+router.get('/audit/:id/report.json', verifyToken, sendReport('json'));
 
 // ── SINGLE AUDIT — respects canAccessAudit ───────────────────────────────────
 router.get('/audit/:id', verifyToken, async (req, res) => {
@@ -105,6 +141,7 @@ router.delete('/audit/:id', verifyToken, requireMinRole('moderator'), async (req
 
         const deleted = database.deleteAudit(id);
         if (deleted) {
+            reportStore.remove(id);
             console.log(`🗑️ Audit ${id} deleted by ${req.user.email} (${req.user.role})`);
             res.json({ success: true, message: `Audit ${id} deleted successfully` });
         } else {
@@ -123,7 +160,8 @@ router.get('/history/:url', verifyToken, async (req, res) => {
         const limit = parseInt(req.query.limit) || 10;
         const userId = req.user.id;
 
-        const history = database.getAuditHistory(decodedUrl, limit, userId);
+        const formFactor = ['mobile', 'desktop'].includes(req.query.formFactor) ? req.query.formFactor : null;
+        const history = database.getAuditHistory(decodedUrl, limit, userId, formFactor);
         const totalCount = database.getAuditCountForUrl(decodedUrl, userId);
 
         res.json({ success: true, data: history, count: history.length, totalCount });
@@ -134,13 +172,15 @@ router.get('/history/:url', verifyToken, async (req, res) => {
 });
 
 // ── TREND DATA for charts — always the logged-in account's own audits ───────
+// ?formFactor=mobile|desktop keeps mobile and desktop results apart
 router.get('/trend/:url', verifyToken, async (req, res) => {
     try {
         const decodedUrl = decodeURIComponent(req.params.url);
         const limit = parseInt(req.query.limit) || 10;
 
         // Oldest first, so the chart reads left → right
-        const history = database.getAuditHistory(decodedUrl, limit, req.user.id).reverse();
+        const formFactor = ['mobile', 'desktop'].includes(req.query.formFactor) ? req.query.formFactor : null;
+        const history = database.getAuditHistory(decodedUrl, limit, req.user.id, formFactor).reverse();
 
         const trendData = {
             labels: history.map(audit => {
@@ -148,11 +188,13 @@ router.get('/trend/:url', verifyToken, async (req, res) => {
                 return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
             }),
             scores:   history.map(audit => audit.performance_score),
-            lcp:      history.map(audit => (audit.lcp / 1000).toFixed(2)),
-            fcp:      history.map(audit => (audit.fcp / 1000).toFixed(2)),
-            cls:      history.map(audit => audit.cls?.toFixed(3) || 0),
-            tbt:      history.map(audit => (audit.tbt / 1000).toFixed(2)),
-            requests: history.map(audit => audit.requests || 0),
+            lcp:      history.map(audit => sec(audit.lcp)),
+            fcp:      history.map(audit => sec(audit.fcp)),
+            cls:      history.map(audit => cls3(audit.cls)),
+            tbt:      history.map(audit => sec(audit.tbt)),
+            si:       history.map(audit => sec(audit.speed_index)),
+            requests: history.map(audit => audit.requests),
+            reliability: history.map(audit => audit.reliability),
         };
 
         res.json({ success: true, data: trendData, historyCount: history.length });

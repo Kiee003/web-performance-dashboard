@@ -1,38 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { PantauLogo, BRAND } from './Logo';
 import './LoginPage.css';
-
-// Clean SVG performance gauge icon — no emoji
-const PerformanceIcon = () => (
-    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-        {/* Outer arc (gauge track) */}
-        <path
-            d="M8 34 A18 18 0 1 1 40 34"
-            stroke="rgba(255,255,255,0.25)"
-            strokeWidth="3.5"
-            strokeLinecap="round"
-            fill="none"
-        />
-        {/* Filled arc (performance indicator) */}
-        <path
-            d="M8 34 A18 18 0 0 1 35.1 15.9"
-            stroke="white"
-            strokeWidth="3.5"
-            strokeLinecap="round"
-            fill="none"
-        />
-        {/* Needle */}
-        <line
-            x1="24" y1="34"
-            x2="33" y2="16"
-            stroke="white"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-        />
-        {/* Needle base dot */}
-        <circle cx="24" cy="34" r="3" fill="white" />
-    </svg>
-);
 
 const LoginPage = () => {
     const { login, register } = useAuth();
@@ -85,10 +54,10 @@ const LoginPage = () => {
                 {/* Header */}
                 <div className="login-header">
                     <div className="login-icon-wrap">
-                        <PerformanceIcon />
+                        <PantauLogo size={72} />
                     </div>
-                    <h1>Web Performance Dashboard</h1>
-                    <p>Analyse, Optimise and Monitor Your website</p>
+                    <h1>{BRAND.name}</h1>
+                    <p>Analyse, optimise and monitor your website</p>
                 </div>
 
                 {/* Tabs */}

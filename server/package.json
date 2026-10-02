@@ -1,8 +1,8 @@
 {
-  "name": "web-performance-dashboard-server",
+  "name": "pantau-server",
   "version": "1.0.0",
   "private": true,
-  "description": "API server for the Web Performance Dashboard (Lighthouse + DeepSeek AI)",
+  "description": "Pantau API server (Lighthouse + DeepSeek AI)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

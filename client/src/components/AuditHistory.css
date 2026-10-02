@@ -1,99 +1,127 @@
-.btn-history {
-    background: #6c757d;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    margin-top: 10px;
-    transition: background 0.3s;
-}
-
-.btn-history:hover {
-    background: #5a6268;
-}
-
-.audit-history {
-    margin-top: 20px;
+/* ── Audit history + performance chart (under Run Audit results) ──────────── */
+.history {
+    margin-top: 30px;
     padding: 20px;
     background: #f8f9fa;
-    border-radius: 8px;
-    border: 1px solid #dee2e6;
+    border-radius: 12px;
 }
 
-.history-header {
+.history__state { text-align: center; padding: 20px; color: #666; }
+.history__state--error { color: #dc3545; }
+
+.history__head {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
-.history-header h3 {
+.history__title {
     margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
     color: #333;
-    font-size: 1.1rem;
+    font-size: 1.05rem;
 }
+.history__title--list { margin: 28px 0 12px; }
 
-.btn-close {
-    background: none;
-    border: none;
-    font-size: 20px;
-    cursor: pointer;
-    color: #999;
-    padding: 0 5px;
+.history__count {
+    font-size: 12px;
+    color: #555;
+    background: #eee;
+    padding: 5px 12px;
+    border-radius: 14px;
+    font-weight: 600;
+    white-space: nowrap;
 }
+.history__count-note { font-weight: 400; margin-left: 4px; }
 
-.btn-close:hover {
-    color: #333;
-}
+/* Chart box — height set here so phones can use a shorter one */
+.perf-chart { height: 420px; margin-top: 20px; }
 
-.loading-history {
-    text-align: center;
-    padding: 20px;
-    color: #666;
-}
-
-.no-history {
-    text-align: center;
-    padding: 20px;
-    color: #999;
-}
-
-.history-list {
-    overflow-x: auto;
-}
-
-.history-table {
+/* Table */
+.history__table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.history__table {
     width: 100%;
     border-collapse: collapse;
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
     font-size: 14px;
 }
+.history__table thead tr { background: #f1f3f5; }
+.history__table th { padding: 12px; text-align: center; white-space: nowrap; }
+.history__table th.history__th-id { width: 55px; color: #888; font-size: 12px; font-weight: 600; padding: 12px 10px; }
+.history__table th.history__th-date { text-align: left; }
+.history__table tbody tr { border-bottom: 1px solid #eee; }
+.history__table td { padding: 12px; text-align: center; }
 
-.history-table th,
-.history-table td {
-    padding: 10px;
-    text-align: left;
-    border-bottom: 1px solid #dee2e6;
+.history__id { color: #aaa; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.history__table td.history__date { text-align: left; }
+.history__score { white-space: nowrap; }
+.history__none { color: #bbb; }
+
+/* ── Tablet: smaller cells so more columns fit before scrolling ───────────── */
+@media (max-width: 1024px) {
+    .history__table { font-size: 13px; }
+    .history__table th, .history__table td { padding: 10px 8px; }
 }
 
-.history-table th {
-    background: #e9ecef;
-    font-weight: 600;
-    color: #495057;
-}
+/* ── Phone ────────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+    .history { padding: 14px 12px; margin-top: 22px; }
+    .history__title { font-size: 1rem; }
+    .perf-chart { height: 300px; margin-top: 12px; }
 
-.history-table tr:hover {
-    background: #f1f3f5;
-}
+    /* Each audit becomes a card:
+         #7 · 2/10/2026, 12:39 pm              100/100
+         LCP 1.2s   FCP 0.8s   CLS 0.000
+         TBT 0.0s   SI  1.0s   Runs 1
+         [View report] [JSON]                           */
+    .history__table, .history__table tbody { display: block; background: none; }
+    .history__table thead { display: none; }
+    .history__table tbody tr {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+        padding: 12px;
+        margin-bottom: 8px;
+        background: #fff;
+        border: 1px solid #eee;
+        border-radius: 10px;
+    }
+    .history__table td { padding: 0; text-align: left; }
 
-.score-badge {
-    display: inline-block;
-    padding: 3px 8px;
-    border-radius: 4px;
-    color: white;
-    font-weight: bold;
-    font-size: 12px;
-    min-width: 40px;
-    text-align: center;
+    .history__id    { flex: 0 0 auto; }
+    /* wide basis forces the metrics onto the next line */
+    .history__table td.history__date { flex: 1 1 calc(100% - 150px); min-width: 0; font-size: 12.5px; color: #555; }
+    .history__score { flex: 0 0 auto; text-align: right !important; margin-bottom: 2px; }
+
+    .history__metric {
+        flex: 1 1 calc(33.333% - 6px);
+        display: flex;
+        flex-direction: column;
+        background: #f8f9fa;
+        border-radius: 6px;
+        padding: 6px 8px !important;
+        font-size: 13px;
+        font-weight: 600;
+        color: #333;
+    }
+    .history__metric::before {
+        content: attr(data-label);
+        font-size: 10px;
+        font-weight: 700;
+        color: #888;
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
+    }
+
+    .history__report { flex: 1 1 100%; }
+    .history__report .report-buttons { display: flex; }
+    .history__report .report-buttons button { flex: 1; padding: 8px 10px; }
+    .history__report:has(.history__none) { display: none; }
 }

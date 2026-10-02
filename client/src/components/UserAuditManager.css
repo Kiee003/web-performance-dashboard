@@ -284,13 +284,104 @@
     border-left: 3px solid #667eea;
 }
 
-@media (max-width: 640px) {
-    .uam__table th:nth-child(2),
-    .uam__table td:nth-child(2),
-    .uam__table th:nth-child(5),
-    .uam__table td:nth-child(5) {
-        display: none;
+/* ── Tablet: search row wraps, actions may wrap inside their cell ─────────── */
+@media (max-width: 1024px) {
+    .uam__search-row { flex-wrap: wrap; }
+    .uam__search { flex: 1 1 220px; }
+    .uam__table th, .uam__table td { padding-left: 12px; padding-right: 12px; }
+    .uam__actions { flex-wrap: wrap; }
+}
+
+/* ── Phone: every audit becomes a card — nothing is hidden ────────────────
+       example.com/page                     100/100
+       Ali · ali@mail.com                     (User Audit Data only)
+       #7 · 2 Oct 2026, 12:39 pm
+       [JSON] [CSV] [PDF]  [View report] [JSON]  [delete]
+   Tap the URL to open the details (all metrics, AI summary).
+   Portrait tablets get the same cards, two per row. */
+@media (max-width: 900px) {
+    .uam__search-row { padding: 12px 14px; gap: 8px 10px; }
+    .uam__search { flex: 1 1 100%; padding: 10px 12px; }
+    .uam__count { order: 2; margin-left: auto; }
+
+    .uam__table thead { display: none; }
+    .uam__table, .uam__table tbody { display: block; }
+
+    .uam__table tbody tr:not(.uam__detail-row) {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-areas:
+            "url     url     score"
+            "user    user    user"
+            "id      date    date"
+            "actions actions actions";
+        column-gap: 8px;
+        row-gap: 6px;
+        padding: 14px 16px;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    .uam__table--mine tbody tr:not(.uam__detail-row) {
+        grid-template-areas:
+            "url     url     score"
+            "id      date    date"
+            "actions actions actions";
     }
 
-    .uam__search-row { flex-wrap: wrap; }
+    .uam__table td {
+        display: block;
+        padding: 0;
+        border: none;
+        background: none !important;
+        min-width: 0;
+    }
+    .uam__table tbody tr:hover td { background: none; }
+    .uam__row--expanded { background: #f8f4ff; }
+
+    .uam__id           { grid-area: id; align-self: center; }
+    .uam__date         { grid-area: date; align-self: center; white-space: normal; }
+    .uam__cell-url     { grid-area: url; align-self: center; }
+    .uam__cell-score   { grid-area: score; text-align: right; white-space: nowrap; }
+    .uam__cell-user    { grid-area: user; }
+    .uam__cell-actions { grid-area: actions; padding-top: 4px; }
+
+    .uam__user-cell { flex-direction: row; flex-wrap: wrap; gap: 0 6px; align-items: baseline; }
+
+    .uam__url-btn {
+        max-width: 100%;
+        font-size: 0.92rem;
+        font-weight: 600;
+        padding: 4px 0;
+    }
+
+    .uam__actions { flex-wrap: wrap; gap: 6px 8px; }
+    .uam__actions .export-buttons button { padding: 7px 14px; }
+
+    /* Details panel */
+    .uam__detail-row { display: block; }
+    .uam__detail-row td { display: block; }
+    .uam__detail { padding: 14px 16px; }
+    .uam__metrics {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+    }
+    .uam__metric-chip { min-width: 0; padding: 6px 4px; }
+    .uam__metric-val { font-size: 0.85rem; text-align: center; overflow-wrap: anywhere; }
+
+    .uam__empty-state { padding: 36px 18px; }
+
+    /* Hint that the URL opens the details */
+    .uam__url-btn::after { content: " \25BE"; text-decoration: none; display: inline-block; margin-left: 2px; }
+    .uam__url-btn[aria-expanded="true"]::after { content: " \25B4"; }
 }
+
+/* Portrait tablet: two cards side by side; an opened card's details span
+   the full width and the next card fills the gap beside it */
+@media (min-width: 641px) and (max-width: 900px) {
+    .uam__table tbody {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-auto-flow: row dense;
+    }
+    .uam__detail-row { grid-column: 1 / -1; }
+}

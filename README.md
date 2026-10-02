@@ -1,6 +1,12 @@
-# Web Performance Dashboard
+<p align="center">
+  <img src="client/public/logo192.png" width="96" height="96" alt="Pantau logo">
+</p>
 
-A web dashboard that runs **Google Lighthouse** performance audits on any website and uses **DeepSeek AI** to explain the results in plain language, with prioritised recommendations that non-technical users can act on.
+<h1 align="center">Pantau</h1>
+
+<p align="center"><strong>Web performance insights, powered by Google Lighthouse and AI.</strong></p>
+
+**Pantau** (Malay for *"to monitor"*) runs **Google Lighthouse** performance audits on any website and uses **DeepSeek AI** to explain the results in plain language, with prioritised recommendations that non-technical users can act on.
 
 > Final Year Project — *Web Performance Dashboard Using Google Lighthouse with DeepSeek API*
 > Muhammad Alif Marzuki bin Rizuan · Bachelor of Computer Science (Hons.) Computer Networks · Universiti Teknologi MARA
@@ -10,6 +16,7 @@ A web dashboard that runs **Google Lighthouse** performance audits on any websit
 ## Contents
 
 - [Features](#features)
+- [Result integrity](#result-integrity)
 - [Tech stack](#tech-stack)
 - [How it works](#how-it-works)
 - [Project structure](#project-structure)
@@ -28,14 +35,60 @@ A web dashboard that runs **Google Lighthouse** performance audits on any websit
 
 | Feature | What it does |
 |---|---|
-| **Performance audit** | Runs Lighthouse in headless Chrome on a URL and reports the performance score, LCP, FCP, CLS, TBT, TTFB and request count, colour-coded against Google's targets. |
-| **AI analysis** | Sends the metrics to DeepSeek (`deepseek-chat`) and shows a verdict, a plain-language summary and recommendation cards. If the AI is unavailable, a built-in rule-based analysis is used instead. |
+| **Performance audit** | Runs Lighthouse in headless Chrome and reports the performance score and all five scored metrics (FCP, LCP, TBT, CLS, Speed Index) plus server response time (TTFB) and request count. Choose **Mobile or Desktop** and **1, 3 or 5 runs** (median shown). |
+| **Result integrity** | Values come straight from Lighthouse, unmeasurable metrics show as N/A (never 0), distorted results are flagged, and the original Lighthouse report is saved for every audit. See [Result integrity](#result-integrity). |
+| **AI analysis** | Sends the metrics, test conditions and any reliability warnings to DeepSeek (`deepseek-chat`) and shows a verdict, a plain-language summary and recommendation cards. If the AI is unavailable, a built-in rule-based analysis is used instead. |
 | **Audited websites** | Every successful audit is saved. Users can search their history and re-open past results. |
 | **Trend chart** | Line chart of score, LCP, FCP and TBT over time for a website (Chart.js). |
 | **Compare performance** | Side-by-side comparison of two or more audits, highlighting the best performer. |
 | **URL crawler** | Lists every link on a page, classified as internal or external. |
 | **Export** | Download audits as JSON, CSV or PDF. |
 | **Accounts & roles** | Login with JWT, three roles (user, moderator, admin), and admin tools to manage accounts and assign users to moderators. |
+
+## Result integrity
+
+The dashboard is designed so its numbers can always be checked against Lighthouse itself.
+
+**Same engine, same settings.** Audits run Lighthouse 13 with its own presets:
+
+| Device | Network | CPU | Equivalent to |
+|---|---|---|---|
+| Mobile (default) | simulated slow 4G (150 ms RTT, 1.6 Mbps) | 4× slower | PageSpeed Insights, Chrome DevTools → Lighthouse → *Mobile* |
+| Desktop | simulated fast connection (40 ms RTT, 10 Mbps) | no slowdown | Chrome DevTools → Lighthouse → *Desktop* |
+
+Each run uses a fresh Chrome profile (cold cache), like DevTools with "Clear storage" ticked. Every audit records the device, throttling, number of runs, Lighthouse version and exact Chrome version, and shows them as **Test conditions**.
+
+**Values are read, not recalculated.** Each metric is taken from the Lighthouse audit Lighthouse itself uses (`server/services/metricsExtractor.js`):
+
+| Metric | Lighthouse audit | In the score? |
+|---|---|---|
+| FCP / LCP / TBT / CLS / Speed Index | `first-contentful-paint`, `largest-contentful-paint`, `total-blocking-time`, `cumulative-layout-shift`, `speed-index` | Yes (10% / 25% / 30% / 25% / 10%) |
+| TTFB | `server-response-time` (main document) | No |
+
+Colours (green / orange / red) use Lighthouse's own per-metric scores, so they match the official report for both mobile and desktop.
+
+**Several runs → median.** With 3 or 5 runs, the run shown is chosen with Lighthouse's own `computeMedianRun`, and every run's score is kept.
+
+**Reliability checks.** Each result is rated *Reliable*, *Check* or *Unreliable*:
+
+| Rated | When |
+|---|---|
+| Unreliable | Lighthouse couldn't calculate the score or measure a scored metric · a timing is longer than Lighthouse waits for a page (60 s) · simulated LCP is over 10× the LCP actually observed in the browser (and over 10 s) |
+| Check | Lighthouse issued a warning (e.g. page didn't finish loading) · scores across runs differ by more than 10 points |
+
+The reasons are shown on screen, in exports and to the AI, which is told not to present affected values as real visitor experience. Audits saved before these checks were added are checked retrospectively for impossible (> 60 s) timings.
+
+**Original report kept.** The full Lighthouse HTML report and raw JSON are saved for every audit (`server/data/reports/`). Use **View full Lighthouse report** or **Raw JSON** (opens in the official [Lighthouse Viewer](https://googlechrome.github.io/lighthouse/viewer/)).
+
+**Comparing with "direct" Lighthouse.** Use the same version and settings — from `server/`:
+
+```bash
+npx lighthouse https://example.com --only-categories=performance --chrome-flags="--headless=new" --view
+```
+
+Add `--preset=desktop` for desktop. Expect a few points of difference between any two runs, even with the same tool; use 3–5 runs to compare reliably.
+
+> **Tip:** audit a production build. Development servers (Vite/webpack dev mode, Laravel Herd `.test` sites with `npm run dev`) serve unminified files and keep connections open, which can make Lighthouse's simulation produce impossible values.
 
 ## Tech stack
 
@@ -94,7 +147,9 @@ FYP-Project/
 │   │   ├── crawler.js        ← /api/crawl/analyze
 │   │   └── system.js         ← /api/test, /api/health
 │   ├── services/             ← the actual work, independent of HTTP
-│   │   ├── lighthouseService.js   ← runs Lighthouse, extracts metrics
+│   │   ├── lighthouseService.js   ← runs Lighthouse (mobile/desktop, 1–5 runs, median)
+│   │   ├── metricsExtractor.js    ← reads metrics from Lighthouse + reliability checks
+│   │   ├── reportStore.js         ← saves the original Lighthouse report per audit
 │   │   ├── chromeSession.js       ← starts/stops headless Chrome, cleans its temp profiles
 │   │   ├── deepseekService.js     ← AI prompt, response parsing, fallback analysis
 │   │   ├── auditQueue.js          ← one audit at a time
@@ -102,24 +157,30 @@ FYP-Project/
 │   ├── utils/                ← small shared helpers
 │   │   ├── access.js         ← who may see which audit
 │   │   ├── csv.js            ← CSV formatting
+│   │   ├── format.js         ← number formatting (missing values stay empty, never 0)
 │   │   └── url.js            ← URL validation
-│   └── data/                 ← SQLite database file (created automatically, not in Git)
+│   └── data/                 ← SQLite database + reports/ (created automatically, not in Git)
 │
 ├── client/                   ← React dashboard (built with Vite)
 │   ├── index.html            ← page shell; loads src/index.jsx
 │   ├── vite.config.js        ← dev server (port 3000) + /api proxy to the PORT in server/.env
-│   ├── public/               ← static files copied as-is (favicon, icons, manifest)
+│   ├── public/               ← static files copied as-is: pantau-logo.svg, favicon.ico,
+│   │                           logo192/512.png, apple-touch-icon.png, manifest.json
 │   └── src/
 │       ├── index.jsx         ← starts React
 │       ├── App.jsx           ← shows LoginPage or Dashboard
 │       ├── services/api.js   ← the ONLY file that calls the backend
+│       ├── utils/metrics.js  ← shared metric formatting, colours, test-conditions text
 │       ├── context/AuthContext.jsx ← logged-in user, login/logout, role helpers
 │       └── components/       ← one component (+ CSS) per page or widget
+│           ├── Logo.jsx             ← Pantau logo + brand name (single source)
 │           ├── Dashboard.jsx        ← main layout + Run Audit page
 │           ├── Sidebar.jsx          ← navigation (items depend on role)
 │           ├── AIInsights.jsx       ← AI analysis cards
 │           ├── MyAuditedWebsites.jsx, AuditHistory.jsx, PerformanceChart.jsx
 │           ├── ComparisonView.jsx, UrlCrawler.jsx, ExportButton.jsx
+│           ├── ReliabilityNotice.jsx ← reliability warning + badge
+│           ├── ReportButtons.jsx     ← "View full Lighthouse report" / "Raw JSON"
 │           ├── UserAuditManager.jsx ← User Audit Data (moderator/admin)
 │           ├── AdminPanel.jsx       ← Manage Accounts (admin)
 │           └── LoginPage.jsx, LoadingIndicator.jsx
@@ -246,11 +307,13 @@ All endpoints are under `/api`. Unless marked **public**, send the login token i
 
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
-| POST | `/api/audit` | any user | Run a Lighthouse audit. Body: `{ "url": "https://..." }` |
+| POST | `/api/audit` | any user | Run an audit. Body: `{ "url": "https://...", "formFactor": "mobile" \| "desktop", "runs": 1 \| 3 \| 5 }` (defaults: mobile, 1) |
 | GET | `/api/audit/:id` | owner / assigned moderator / admin | One audit |
+| GET | `/api/audit/:id/report` | owner / assigned moderator / admin | The original Lighthouse HTML report |
+| GET | `/api/audit/:id/report.json` | owner / assigned moderator / admin | The raw Lighthouse result (download) |
 | DELETE | `/api/audit/:id` | moderator+ (within scope) | Delete an audit |
-| GET | `/api/history/:url` | any user | Your audit history for a URL |
-| GET | `/api/trend/:url` | any user | Your chart data for a URL |
+| GET | `/api/history/:url` | any user | Your audit history for a URL (`?formFactor=mobile\|desktop` to filter) |
+| GET | `/api/trend/:url` | any user | Your chart data for a URL (`?formFactor=` keeps mobile and desktop apart) |
 | GET | `/api/audits/mine` | any user | All your audits |
 | GET | `/api/audits` | moderator+ | Other users' audits (moderators see assigned users only) |
 | GET | `/api/website/:url/stats` | any user | Average, best and worst score for a URL |
@@ -294,7 +357,9 @@ The project is organised so each feature has a clear home. For example, adding a
 | Server prints `EADDRINUSE` | Another program, often an old server window, is using the port. Find it with `netstat -ano \| findstr :5050` and close it, or change `PORT`. |
 | Login page says **"Could not connect to server"** | The API isn't running, or was started after the dashboard. Start it (`npm run dev`) and check `http://localhost:<PORT>/api/test`. If you changed `PORT`, restart `npm run dev` so the Vite proxy picks it up. |
 | Error mentioning `NODE_MODULE_VERSION` or `better_sqlite3.node` | Node.js was updated after packages were installed. Run `npm rebuild better-sqlite3 --prefix server`, or delete `server/node_modules` and run `npm run setup`. |
-| Audit returns score **0** with "Audit failed" | Chrome couldn't start or reach the site. Check Chrome is installed (or set `CHROME_PATH`), that the URL opens in a normal browser, and look at the server terminal for the error. |
+| "Lighthouse could not audit this page: …" | Chrome couldn't load the site (wrong URL, server down, certificate or DNS problem). Check the URL opens in a normal browser and look at the server terminal. Nothing is saved for failed audits. |
+| Result marked **Unreliable** (e.g. LCP of hundreds of seconds) | Lighthouse's simulation was distorted, usually by a request that never finishes (dev-server live reload, polling, a hanging file). Open the full Lighthouse report to find it, and audit a production build with 3–5 runs. |
+| Dashboard numbers differ from Chrome DevTools | Check DevTools uses the same device (Mobile/Desktop) and compare against several runs — and note DevTools ships its own Lighthouse version. The Test conditions line shows exactly what this dashboard used. |
 | AI section says **"AI service unavailable"** | `DEEPSEEK_API_KEY` is missing or invalid, the account has no credit, or DeepSeek took longer than 30 s. The fallback analysis is shown instead. |
 | `npm audit` reports vulnerabilities | Run `npm audit fix` in the folder it reports (root, `server` or `client`). **Never use `npm audit fix --force`** — it can install breaking major versions. |
 | Forgot the admin password / want a clean start | Stop the server and delete `server/data/audit_history.db`. A new empty database is created on the next start, and the first account registered becomes admin. |
@@ -302,6 +367,8 @@ The project is organised so each feature has a clear home. For example, adding a
 ## Known limitations
 
 - Chrome must be installed on the machine running the server.
-- Results vary between runs of the same URL depending on network conditions, website load and machine speed.
+- Results vary between runs of the same URL depending on network conditions, website load and machine speed — use 3 or 5 runs when results matter.
+- Mobile results use Lighthouse's *simulated* throttling (an estimate, the same method PageSpeed Insights uses), not a real slow network.
+- Each saved audit keeps its Lighthouse report (~1 MB). Deleting an audit or user also deletes its reports.
 - SQLite and the in-memory audit queue mean the app is designed for one server process. Queued audits are lost if the server restarts.
 - Audits run one at a time, so several users auditing at once wait in line.

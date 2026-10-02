@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import API from '../services/api';
+import './UrlCrawler.css';
 
 // ── SVG icons ─────────────────────────────────────────────────────────────────
 const Icons = {
@@ -46,18 +47,10 @@ const Icons = {
     ),
 };
 
-// Reusable section header style
+// Section heading inside the results
 const SectionHeader = ({ icon, title }) => (
-    <h4 style={{
-        marginBottom: '12px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        color: '#333',
-        fontSize: '14px',
-        fontWeight: '600',
-    }}>
-        <span style={{ display: 'flex', alignItems: 'center', color: '#6c5ce7' }}>{icon}</span>
+    <h4 className="crawler__section-title">
+        <span className="crawler__icon">{icon}</span>
         {title}
     </h4>
 );
@@ -95,90 +88,50 @@ const UrlCrawler = () => {
     };
 
     return (
-        <div style={{ padding: '20px', background: 'white', borderRadius: '10px' }}>
+        <div className="crawler">
 
             {/* Header */}
-            <h3 style={{ marginBottom: '5px', display: 'flex', alignItems: 'center', gap: '8px', color: '#333' }}>
-                <span style={{ display: 'flex', color: '#6c5ce7' }}>{Icons.crawler}</span>
+            <h3 className="crawler__title">
+                <span className="crawler__icon">{Icons.crawler}</span>
                 Smart URL Crawler
             </h3>
-            <p style={{ color: '#666', marginBottom: '20px', fontSize: '14px' }}>
-                Enter a URL to analyze its hyperlinks and automatically detect any links available
+            <p className="crawler__intro">
+                Enter a URL to analyse its hyperlinks and automatically detect any links available
             </p>
 
-            {/* Form */}
-            <form onSubmit={handleCrawl} style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+            {/* Form — stacks on phones */}
+            <form onSubmit={handleCrawl} className="crawler__form" noValidate>
                 <input
-                    type="text"
+                    type="url"
+                    inputMode="url"
+                    autoCapitalize="off"
+                    autoCorrect="off"
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
                     placeholder="https://example.com"
                     disabled={loading}
-                    style={{
-                        flex: 1,
-                        padding: '11px 14px',
-                        border: '1.5px solid #ddd',
-                        borderRadius: '7px',
-                        fontSize: '14px',
-                        outline: 'none',
-                        transition: 'border-color 0.2s',
-                    }}
-                    onFocus={e  => e.target.style.borderColor = '#6c5ce7'}
-                    onBlur={e   => e.target.style.borderColor = '#ddd'}
+                    aria-label="Website URL"
+                    className="crawler__input"
                 />
-                <button
-                    type="submit"
-                    disabled={loading}
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '7px',
-                        padding: '11px 20px',
-                        background: loading ? '#a29bfe' : '#6c5ce7',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '7px',
-                        cursor: loading ? 'not-allowed' : 'pointer',
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        whiteSpace: 'nowrap',
-                        transition: 'background 0.2s',
-                    }}
-                    onMouseEnter={e => { if (!loading) e.currentTarget.style.background = '#5b4bc4'; }}
-                    onMouseLeave={e => { if (!loading) e.currentTarget.style.background = '#6c5ce7'; }}
-                >
-                    <span style={{ display: 'flex' }}>{Icons.search}</span>
+                <button type="submit" disabled={loading} className="crawler__submit">
+                    <span className="crawler__btn-icon">{Icons.search}</span>
                     {loading ? 'Crawling...' : 'Crawl & Analyze'}
                 </button>
             </form>
 
             {/* Error */}
             {error && (
-                <div style={{
-                    display: 'flex', alignItems: 'center', gap: '8px',
-                    color: '#dc3545', padding: '11px 14px',
-                    background: '#fff0f0', borderRadius: '7px',
-                    marginBottom: '15px', fontSize: '14px',
-                    border: '1px solid #ffc0c0',
-                }}>
-                    <span style={{ display: 'flex', flexShrink: 0 }}>{Icons.error}</span>
+                <div className="crawler__error" role="alert">
+                    <span className="crawler__btn-icon">{Icons.error}</span>
                     {error}
                 </div>
             )}
 
             {/* Loading spinner */}
             {loading && (
-                <div style={{ textAlign: 'center', padding: '40px' }}>
-                    <div style={{
-                        width: '38px', height: '38px',
-                        border: '3px solid #f3f3f3',
-                        borderTop: '3px solid #6c5ce7',
-                        borderRadius: '50%',
-                        animation: 'spin 0.8s linear infinite',
-                        margin: '0 auto 14px',
-                    }} />
-                    <p style={{ color: '#666', fontSize: '14px' }}>Fetching page source and analysing links...</p>
-                    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                <div className="crawler__loading">
+                    <div className="crawler__spinner" />
+                    <p>Fetching page source and analysing links...</p>
                 </div>
             )}
 
@@ -186,31 +139,24 @@ const UrlCrawler = () => {
             {result && (
                 <div>
                     {/* Source info */}
-                    <div style={{ marginBottom: '20px', padding: '14px', background: '#f8f9fa', borderRadius: '8px' }}>
+                    <div className="crawler__section">
                         <SectionHeader icon={Icons.document} title="Source Information" />
-                        <p style={{ margin: '4px 0', fontSize: '13px', color: '#444' }}><strong>URL:</strong> {result.sourceUrl}</p>
-                        <p style={{ margin: '4px 0', fontSize: '13px', color: '#444' }}><strong>HTML Size:</strong> {(result.sourceHtmlLength / 1024).toFixed(2)} KB</p>
+                        <p className="crawler__info"><strong>URL:</strong> {result.sourceUrl}</p>
+                        <p className="crawler__info"><strong>HTML Size:</strong> {(result.sourceHtmlLength / 1024).toFixed(2)} KB</p>
                     </div>
 
                     {/* Link statistics */}
-                    <div style={{ marginBottom: '20px', padding: '14px', background: '#f8f9fa', borderRadius: '8px' }}>
+                    <div className="crawler__section">
                         <SectionHeader icon={Icons.link} title="Link Statistics" />
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
+                        <div className="crawler__stats">
                             {[
-                                { label: 'Total Links Found',          value: result.totalLinksFound,              color: '#6c5ce7', bg: 'white' },
-                                { label: 'Internal Links',             value: result.internalLinks,                color: '#6c5ce7', bg: 'white' },
-                                { label: 'External Links',             value: result.externalLinks,                color: '#6c5ce7', bg: 'white' },
-                            ].map((item, i) => (
-                                <div key={i} style={{
-                                    padding: '14px',
-                                    background: item.bg,
-                                    borderRadius: '8px',
-                                    textAlign: 'center',
-                                    boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-                                    border: item.border || '1px solid #eee',
-                                }}>
-                                    <div style={{ fontSize: '26px', fontWeight: 'bold', color: item.color }}>{item.value}</div>
-                                    <div style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>{item.label}</div>
+                                { label: 'Total Links Found', value: result.totalLinksFound },
+                                { label: 'Internal Links',    value: result.internalLinks },
+                                { label: 'External Links',    value: result.externalLinks },
+                            ].map(item => (
+                                <div key={item.label} className="crawler__stat">
+                                    <div className="crawler__stat-value">{item.value}</div>
+                                    <div className="crawler__stat-label">{item.label}</div>
                                 </div>
                             ))}
                         </div>
@@ -218,31 +164,16 @@ const UrlCrawler = () => {
 
                     {/* All links */}
                     {result.allLinks && result.allLinks.length > 0 && (
-                        <div style={{ marginBottom: '20px', padding: '14px', background: '#f8f9fa', borderRadius: '8px' }}>
+                        <div className="crawler__section">
                             <SectionHeader icon={Icons.list} title="All Links Found" />
                             <details>
-                                <summary style={{ cursor: 'pointer', color: '#6c5ce7', fontWeight: '500', fontSize: '13px' }}>
-                                    Show {result.allLinks.length} links
-                                </summary>
-                                <div style={{ maxHeight: '300px', overflowY: 'auto', marginTop: '10px' }}>
+                                <summary className="crawler__summary">Show {result.allLinks.length} links</summary>
+                                <div className="crawler__links">
                                     {result.allLinks.map((link, idx) => (
-                                        <div key={idx} style={{ padding: '8px', borderBottom: '1px solid #eee', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                                            <a href={link.url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, color: '#2196f3', textDecoration: 'none', fontSize: '12px', wordBreak: 'break-all' }}>
-                                                {link.url}
-                                            </a>
-                                            {link.text && (
-                                                <span style={{ color: '#888', fontSize: '11px', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                    {link.text}
-                                                </span>
-                                            )}
-                                            <span style={{
-                                                padding: '2px 8px',
-                                                borderRadius: '12px',
-                                                fontSize: '10px',
-                                                fontWeight: '600',
-                                                background: link.isInternal ? '#e3f2fd' : '#fce4ec',
-                                                color: link.isInternal ? '#1976d2' : '#c2185b',
-                                            }}>
+                                        <div key={idx} className="crawler__link">
+                                            <a href={link.url} target="_blank" rel="noopener noreferrer">{link.url}</a>
+                                            {link.text && <span className="crawler__link-text">{link.text}</span>}
+                                            <span className={`crawler__tag ${link.isInternal ? 'crawler__tag--internal' : 'crawler__tag--external'}`}>
                                                 {link.isInternal ? 'Internal' : 'External'}
                                             </span>
                                         </div>
@@ -257,4 +188,4 @@ const UrlCrawler = () => {
     );
 };
 
-export default UrlCrawler;
+export default UrlCrawler;

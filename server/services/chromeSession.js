@@ -84,7 +84,7 @@ function waitForExit(child, timeoutMs) {
     });
 }
 
-// Launch a fresh headless Chrome. Returns { port, close() }.
+// Launch a fresh headless Chrome. Returns { port, version, close() }.
 async function launchChrome(chromePath) {
     const profileDir = path.join(PROFILES_DIR, `audit-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`);
     fs.mkdirSync(profileDir, { recursive: true });
@@ -107,7 +107,16 @@ async function launchChrome(chromePath) {
 
     session.port = launcher.port;
     activeSessions.add(session);
-    return { port: session.port, close: () => closeSession(session) };
+
+    // Exact browser version (the user-agent string is reduced to "141.0.0.0")
+    let version = null;
+    try {
+        const res = await fetch(`http://127.0.0.1:${session.port}/json/version`);
+        const info = await res.json();
+        version = (info.Browser || '').split('/')[1] || null;
+    } catch {}
+
+    return { port: session.port, version, close: () => closeSession(session) };
 }
 
 async function closeSession(session) {

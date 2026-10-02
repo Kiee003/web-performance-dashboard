@@ -77,13 +77,51 @@ function initializeDatabase() {
         )
     `);
 
-    // Migration: add user_id to existing audits table if not present
-    try {
-        db.exec(`ALTER TABLE audits ADD COLUMN user_id INTEGER REFERENCES users(id)`);
-        console.log('✅ Migrated audits table: added user_id column');
-    } catch (e) {
-        // Column already exists — safe to ignore
+    // Migrations: add columns introduced after the first release. Existing
+    // audits keep NULL in the new columns (shown as "not recorded").
+    const auditColumns = db.prepare(`PRAGMA table_info(audits)`).all().map(c => c.name);
+    const NEW_AUDIT_COLUMNS = {
+        user_id:            'INTEGER REFERENCES users(id)',
+        speed_index:        'REAL',      // ms
+        metric_scores:      'TEXT',      // JSON {lcp: 0-1, ...} Lighthouse's own per-metric scores
+        observed_lcp:       'REAL',      // ms, LCP actually seen in the browser
+        observed_load:      'REAL',      // ms, load event actually seen
+        form_factor:        'TEXT',      // 'mobile' | 'desktop'
+        throttling_method:  'TEXT',      // 'simulate' | 'devtools' | 'provided'
+        throttling:         'TEXT',      // JSON {rttMs, throughputKbps, cpuSlowdownMultiplier}
+        runs:               'INTEGER',   // number of Lighthouse runs
+        run_scores:         'TEXT',      // JSON array of every run's score
+        lighthouse_version: 'TEXT',
+        chrome_version:     'TEXT',
+        benchmark_index:    'REAL',      // Lighthouse's CPU speed estimate for the test machine
+        reliability:        'TEXT',      // 'ok' | 'warning' | 'unreliable'
+        reliability_notes:  'TEXT',      // JSON array of explanations
+        has_report:         'INTEGER DEFAULT 0',
+    };
+    for (const [name, type] of Object.entries(NEW_AUDIT_COLUMNS)) {
+        if (!auditColumns.includes(name)) {
+            db.exec(`ALTER TABLE audits ADD COLUMN ${name} ${type}`);
+            console.log(`✅ Migrated audits table: added ${name}`);
+        }
     }
+
+    // One-off corrections for audits saved before the integrity checks
+    // (they have no lighthouse_version). Safe to run on every start.
+    //  • TTFB was read from an audit Lighthouse 13 no longer has, so it was
+    //    always stored as 0 — that means "not measured", not "0 ms".
+    db.exec(`UPDATE audits SET ttfb = NULL WHERE lighthouse_version IS NULL AND ttfb = 0`);
+    //  • Values longer than Lighthouse waits for a page (60 s) cannot have been
+    //    observed — mark those audits unreliable, like new audits would be.
+    const flagged = db.prepare(`
+        UPDATE audits
+        SET reliability = 'unreliable',
+            reliability_notes = ?
+        WHERE lighthouse_version IS NULL AND reliability IS NULL
+          AND (lcp > 60000 OR fcp > 60000)
+    `).run(JSON.stringify([
+        'A timing longer than Lighthouse waits for a page (60 s) was recorded, so it cannot have been observed — the simulation was distorted. (Checked retrospectively; this audit predates the reliability checks.)'
+    ]));
+    if (flagged.changes > 0) console.log(`✅ Flagged ${flagged.changes} older audit(s) with impossible timings as unreliable`);
 
     db.exec(`CREATE INDEX IF NOT EXISTS idx_url ON audits(url)`);
     db.exec(`CREATE INDEX IF NOT EXISTS idx_timestamp ON audits(timestamp)`);
@@ -98,8 +136,10 @@ initializeDatabase();
 
 // ─── AUDIT FUNCTIONS ──────────────────────────────────────────────────────────
 
+const json = (v) => (v === undefined || v === null ? null : JSON.stringify(v));
+
 const saveAudit = (auditData, userId = null) => {
-    const { url, scores, metrics, requests, aiInsights } = auditData;
+    const { url, scores, metrics, requests, aiInsights, observed = {}, settings = {}, runs = {}, reliability = {} } = auditData;
 
     const aiSummary = aiInsights?.summary || '';
     const aiRecommendations = aiInsights?.recommendations
@@ -108,18 +148,23 @@ const saveAudit = (auditData, userId = null) => {
 
     const info = db.prepare(`
         INSERT INTO audits (
-            url, performance_score, lcp, fcp, ttfb, cls, tbt, requests,
+            url, performance_score, lcp, fcp, ttfb, cls, tbt, speed_index, metric_scores, requests,
+            observed_lcp, observed_load,
+            form_factor, throttling_method, throttling, runs, run_scores,
+            lighthouse_version, chrome_version, benchmark_index,
+            reliability, reliability_notes,
             ai_summary, ai_recommendations, created_at, user_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
         url,
         scores.performance,
-        metrics.lcp,
-        metrics.fcp,
-        metrics.ttfb,
-        metrics.cls,
-        metrics.tbt,
-        requests.total,
+        metrics.lcp, metrics.fcp, metrics.ttfb, metrics.cls, metrics.tbt, metrics.si, json(auditData.metricScores),
+        requests?.total ?? null,
+        observed.lcp ?? null, observed.load ?? null,
+        settings.formFactor ?? null, settings.throttlingMethod ?? null, json(settings.throttling),
+        runs.count ?? 1, json(runs.scores),
+        settings.lighthouseVersion ?? null, settings.chromeVersion ?? null, settings.benchmarkIndex ?? null,
+        reliability.level ?? null, json(reliability.notes),
         aiSummary,
         aiRecommendations,
         new Date().toISOString(),
@@ -127,9 +172,15 @@ const saveAudit = (auditData, userId = null) => {
     );
 
     console.log(`💾 Audit saved with ID: ${info.lastInsertRowid} (user: ${userId || 'anonymous'})`);
-    updateWebsiteStats(url, scores.performance);
+    if (scores.performance !== null) updateWebsiteStats(url, scores.performance);
     return info.lastInsertRowid;
 };
+
+const markReportSaved = (id) =>
+    db.prepare(`UPDATE audits SET has_report = 1 WHERE id = ?`).run(id);
+
+const getAuditIdsForUser = (userId) =>
+    db.prepare(`SELECT id FROM audits WHERE user_id = ?`).all(userId).map(r => r.id);
 
 const updateWebsiteStats = (url, score) => {
     const website = db.prepare(`SELECT * FROM websites WHERE url = ?`).get(url);
@@ -157,17 +208,17 @@ const updateWebsiteStats = (url, score) => {
     }
 };
 
-const getAuditHistory = (url, limit = 10, userId = null) => {
-    if (userId) {
-        return db.prepare(`
-            SELECT * FROM audits WHERE url = ? AND user_id = ?
-            ORDER BY created_at DESC LIMIT ?
-        `).all(url, userId, limit);
-    }
+// formFactor: optional 'mobile' | 'desktop'. Audits saved before the device
+// setting existed were all run with Lighthouse's mobile default.
+const getAuditHistory = (url, limit = 10, userId = null, formFactor = null) => {
+    const where = ['url = ?'];
+    const params = [url];
+    if (userId)     { where.push('user_id = ?'); params.push(userId); }
+    if (formFactor) { where.push("COALESCE(form_factor, 'mobile') = ?"); params.push(formFactor); }
     return db.prepare(`
-        SELECT * FROM audits WHERE url = ?
+        SELECT * FROM audits WHERE ${where.join(' AND ')}
         ORDER BY created_at DESC LIMIT ?
-    `).all(url, limit);
+    `).all(...params, limit);
 };
 
 // True total count of audits for a URL — unaffected by any display LIMIT,
@@ -380,6 +431,8 @@ module.exports = {
     getAllAudits,
     getAuditsForUserIds,
     getAuditById,
+    markReportSaved,
+    getAuditIdsForUser,
     getAuditsByIds,
     getLatestAuditForUrl,
     getWebsiteStats,

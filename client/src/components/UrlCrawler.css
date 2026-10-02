@@ -1,0 +1,162 @@
+/* ── URL Crawler page ──────────────────────────────────────────────────────── */
+.crawler {
+    padding: 20px;
+    background: #fff;
+    border-radius: 0 0 16px 16px;
+}
+
+.crawler__icon { display: flex; align-items: center; color: #6c5ce7; }
+
+.crawler__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 5px;
+    color: #333;
+}
+.crawler__intro { color: #666; margin-bottom: 20px; font-size: 14px; line-height: 1.5; }
+
+/* Form */
+.crawler__form { display: flex; gap: 10px; margin-bottom: 20px; }
+.crawler__input {
+    flex: 1;
+    min-width: 0;
+    padding: 11px 14px;
+    border: 1.5px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.crawler__input:focus { border-color: #6c5ce7; }
+.crawler__submit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 11px 20px;
+    background: #6c5ce7;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: background 0.2s;
+}
+.crawler__submit:hover:not(:disabled) { background: #5b4bc4; }
+.crawler__submit:disabled { background: #a29bfe; cursor: not-allowed; }
+.crawler__btn-icon { display: flex; flex-shrink: 0; }
+
+.crawler__error {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #dc3545;
+    padding: 11px 14px;
+    background: #fff0f0;
+    border: 1px solid #ffc0c0;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    font-size: 14px;
+}
+
+.crawler__loading { text-align: center; padding: 40px 10px; color: #666; font-size: 14px; }
+.crawler__spinner {
+    width: 38px;
+    height: 38px;
+    border: 3px solid #f3f3f3;
+    border-top-color: #6c5ce7;
+    border-radius: 50%;
+    animation: crawler-spin 0.8s linear infinite;
+    margin: 0 auto 14px;
+}
+@keyframes crawler-spin { to { transform: rotate(360deg); } }
+
+/* Result sections */
+.crawler__section {
+    margin-bottom: 20px;
+    padding: 14px;
+    background: #f8f9fa;
+    border-radius: 10px;
+}
+.crawler__section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    color: #333;
+    font-size: 14px;
+    font-weight: 600;
+}
+.crawler__info { margin: 4px 0; font-size: 13px; color: #444; overflow-wrap: anywhere; }
+
+.crawler__stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+.crawler__stat {
+    padding: 14px 8px;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+.crawler__stat-value { font-size: 26px; font-weight: 700; color: #6c5ce7; }
+.crawler__stat-label { font-size: 11px; color: #666; margin-top: 4px; }
+
+.crawler__summary {
+    cursor: pointer;
+    color: #6c5ce7;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 6px 0;
+}
+.crawler__links { max-height: 300px; overflow-y: auto; margin-top: 10px; -webkit-overflow-scrolling: touch; }
+.crawler__link {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    padding: 9px 8px;
+    border-bottom: 1px solid #eee;
+}
+.crawler__link a {
+    flex: 1 1 200px;
+    min-width: 0;
+    color: #2196f3;
+    text-decoration: none;
+    font-size: 12.5px;
+    overflow-wrap: anywhere;
+}
+.crawler__link-text {
+    color: #888;
+    font-size: 11px;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.crawler__tag {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 600;
+}
+.crawler__tag--internal { background: #e3f2fd; color: #1976d2; }
+.crawler__tag--external { background: #fce4ec; color: #c2185b; }
+
+/* ── Phone ────────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+    .crawler { padding: 16px 14px; }
+    .crawler__form { flex-direction: column; }
+    .crawler__submit { padding: 13px 20px; font-size: 15px; }
+    .crawler__stats { gap: 8px; }
+    .crawler__stat { padding: 12px 4px; }
+    .crawler__stat-value { font-size: 22px; }
+    .crawler__links { max-height: 55vh; }
+    .crawler__link a { flex-basis: 100%; font-size: 13px; }
+}

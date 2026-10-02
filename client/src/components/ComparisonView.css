@@ -1,0 +1,265 @@
+/* ── Compare Performance page ──────────────────────────────────────────────── */
+.cmp {
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 0 0 16px 16px;
+}
+
+/* Hint */
+.cmp__hint {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    background: #f0f2ff;
+    border: 1px solid #e0e3ff;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #4c4ddc;
+}
+.cmp__hint-icon { display: flex; flex-shrink: 0; margin-top: 3px; }
+
+/* Controls */
+.cmp__controls {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+/* "Two URLs | Two Audit IDs" — a segmented switch, easy to tap */
+.cmp__modes {
+    display: inline-flex;
+    align-self: flex-start;
+    background: #e9e7fb;
+    border-radius: 10px;
+    padding: 4px;
+    gap: 4px;
+}
+.cmp__mode {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 7px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #5b4bc4;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+}
+.cmp__mode input { position: absolute; opacity: 0; pointer-events: none; }
+.cmp__mode.is-active { background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1); color: #3f2fa8; }
+.cmp__mode:focus-within { outline: 2px solid #6c5ce7; outline-offset: 1px; }
+
+.cmp__fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+.cmp__field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1 1 240px;
+    min-width: 0;
+}
+.cmp__field label { font-size: 12px; color: #888; font-weight: 600; }
+.cmp__input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    background: #fff;
+    transition: border-color 0.2s;
+}
+.cmp__input:focus { border-color: #6c5ce7; }
+
+.cmp__submit {
+    padding: 11px 24px;
+    background: #6c5ce7;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+.cmp__submit:hover:not(:disabled) { background: #5b4bc4; }
+.cmp__submit:disabled { background: #a29bfe; cursor: not-allowed; }
+
+/* Error */
+.cmp__error {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #dc3545;
+    padding: 10px 14px;
+    background: #fff0f0;
+    border: 1px solid #ffc0c0;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    font-size: 14px;
+}
+.cmp__error-icon { display: flex; flex-shrink: 0; }
+
+/* Site headers */
+.cmp__sites {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+    padding: 14px 16px;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 10px;
+}
+.cmp__site { text-align: center; min-width: 0; }
+.cmp__site-tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    color: #6c5ce7;
+    background: #f0eeff;
+    padding: 2px 8px;
+    border-radius: 12px;
+    margin-bottom: 4px;
+}
+.cmp__site-url {
+    display: block;
+    font-size: 13px;
+    color: #2c3e50;
+    overflow-wrap: anywhere;
+}
+.cmp__site-meta { color: #999; font-size: 11px; }
+
+/* Metrics table */
+.cmp__table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    overflow: hidden;
+}
+.cmp__table th {
+    padding: 11px 14px;
+    text-align: center;
+    background: #f8f9fa;
+    border-bottom: 2px solid #eee;
+    font-size: 12px;
+    font-weight: 700;
+    color: #6c5ce7;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.cmp__table th.cmp__th-metric { text-align: left; color: #555; }
+.cmp__table th.cmp__th-result { color: #555; }
+.cmp__table td {
+    padding: 11px 14px;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 13px;
+    text-align: center;
+}
+.cmp__table tbody tr:nth-child(even) { background: #fafafa; }
+.cmp__table tbody tr:last-child td { border-bottom: none; }
+
+.cmp__table td.cmp__metric { text-align: left; font-weight: 500; color: #444; }
+.cmp__value { color: #333; }
+.cmp__value.is-winner { background: #f0fff4; font-weight: 700; }
+.cmp__trophy { display: inline-flex; align-items: center; margin-left: 5px; color: #28a745; vertical-align: -2px; }
+
+.cmp__result {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
+}
+.cmp__result svg { flex-shrink: 0; }
+.cmp__result--win { color: #28a745; font-weight: 600; }
+.cmp__result--tie { color: #6c757d; font-weight: 500; }
+.cmp__result--na  { color: #999; font-size: 12px; }
+.cmp__diff { color: #888; font-weight: 400; font-size: 11px; }
+
+/* Summary */
+.cmp__summary {
+    margin-top: 14px;
+    padding: 14px 16px;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.cmp__summary p {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    margin: 0;
+    font-size: 14px;
+    color: #333;
+}
+.cmp__summary-icon { display: flex; align-items: center; }
+.cmp__summary-icon--star  { color: #f59e0b; }
+.cmp__summary-icon--speed { color: #667eea; }
+.cmp__summary-url { color: #6c5ce7; overflow-wrap: anywhere; min-width: 0; }
+
+/* ── Phone ────────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+    .cmp { padding: 14px; }
+
+    .cmp__modes { align-self: stretch; }
+    .cmp__mode { flex: 1; justify-content: center; padding: 10px 8px; }
+    .cmp__submit { padding: 13px 24px; font-size: 15px; }
+
+    .cmp__sites { gap: 10px; padding: 12px; }
+
+    /* Each metric becomes a small card:
+         LCP (s)
+         Site A  2.10 🏆   |   Site B  3.40
+         ✓ Site A wins (1.30)                */
+    .cmp__table, .cmp__table tbody { display: block; border: none; background: none; }
+    .cmp__table thead { display: none; }
+    .cmp__table tbody tr {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas:
+            "metric metric"
+            "a      b"
+            "result result";
+        background: #fff !important;
+        border: 1px solid #eee;
+        border-radius: 10px;
+        margin-bottom: 8px;
+        overflow: hidden;
+    }
+    .cmp__table td { border: none; padding: 8px 12px; }
+    .cmp__table td.cmp__metric {
+        grid-area: metric;
+        font-weight: 700;
+        background: #f8f9fa;
+        font-size: 12.5px;
+    }
+    .cmp__value { font-size: 15px; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+    .cmp__value::before {
+        content: "Site " attr(data-site);
+        font-size: 10.5px;
+        font-weight: 700;
+        color: #6c5ce7;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+    }
+    .cmp__value[data-site="A"] { grid-area: a; border-right: 1px solid #f0f0f0 !important; }
+    .cmp__value[data-site="B"] { grid-area: b; }
+    .cmp__trophy { margin-left: 0; }
+    .cmp__table td.cmp__result-cell { grid-area: result; border-top: 1px solid #f0f0f0; padding: 6px 12px; }
+}

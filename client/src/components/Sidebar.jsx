@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { PantauLogo, BRAND } from './Logo';
 import { useAuth } from '../context/AuthContext';
 import './Sidebar.css';
 
@@ -87,6 +89,21 @@ const Icon = ({ name, size = 18 }) => {
                 <polyline points="15 18 9 12 15 6"/>
             </svg>
         ),
+        menu: (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+        ),
+        close: (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+        ),
+        chevrons: (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="7 15 12 20 17 15"/><polyline points="7 9 12 4 17 9"/>
+            </svg>
+        ),
         expand: (
             <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="9 18 15 12 9 6"/>
@@ -107,77 +124,284 @@ const NAV_ITEMS = [
     { id: 'accounts',   icon: 'accounts', label: 'Manage Accounts',     minRole: 'admin' },
 ];
 
+// ── Screen size ───────────────────────────────────────────────────────────────
+//   desktop  > 1024px  full sidebar, user can collapse it to an icon rail
+//   tablet   769–1024  icon rail; "expand" slides the full menu OVER the page
+//   phone    <= 768    top bar + slide-in drawer
+const getMode = () => {
+    if (typeof window === 'undefined') return 'desktop';
+    if (window.matchMedia('(max-width: 768px)').matches) return 'phone';
+    if (window.matchMedia('(max-width: 1024px)').matches) return 'tablet';
+    return 'desktop';
+};
+
+const useScreenMode = () => {
+    const [mode, setMode] = useState(getMode);
+    useEffect(() => {
+        const update = () => setMode(getMode());
+        window.addEventListener('resize', update);
+        return () => window.removeEventListener('resize', update);
+    }, []);
+    return mode;
+};
+
+// Desktop collapse preference survives page reloads (best-effort)
+const COLLAPSE_KEY = 'pantau_sidebar_collapsed';
+const readCollapsed = () => {
+    try { return localStorage.getItem(COLLAPSE_KEY) === '1'; } catch { return false; }
+};
+const saveCollapsed = (value) => {
+    try { localStorage.setItem(COLLAPSE_KEY, value ? '1' : '0'); } catch { /* ignore */ }
+};
+
+// ── Profile menu (Sign out) ───────────────────────────────────────────────────
+// Rendered into <body> so it is never clipped by the sidebar. Opens to the
+// side of the profile button, or upward when there is no room (phone drawer).
+const ProfileMenu = ({ anchorRef, placement, user, role, onSignOut, onClose }) => {
+    const menuRef = useRef(null);
+    const [style, setStyle] = useState({ visibility: 'hidden' });
+
+    useLayoutEffect(() => {
+        const place = () => {
+            const r = anchorRef.current?.getBoundingClientRect();
+            if (!r) return;
+            if (placement === 'up') {
+                setStyle({ left: r.left, width: r.width, bottom: window.innerHeight - r.top + 8 });
+            } else {
+                setStyle({ left: r.right + 10, bottom: Math.max(12, window.innerHeight - r.bottom) });
+            }
+        };
+        place();
+        window.addEventListener('resize', place);
+        return () => window.removeEventListener('resize', place);
+    }, [anchorRef, placement]);
+
+    // Focus the first item; close on Escape or a click outside
+    useEffect(() => {
+        menuRef.current?.querySelector('button')?.focus();
+        const onKey = (e) => { if (e.key === 'Escape') onClose(true); };
+        const onDown = (e) => {
+            if (menuRef.current?.contains(e.target) || anchorRef.current?.contains(e.target)) return;
+            onClose(false);
+        };
+        document.addEventListener('keydown', onKey);
+        document.addEventListener('mousedown', onDown);
+        document.addEventListener('touchstart', onDown);
+        return () => {
+            document.removeEventListener('keydown', onKey);
+            document.removeEventListener('mousedown', onDown);
+            document.removeEventListener('touchstart', onDown);
+        };
+    }, [anchorRef, onClose]);
+
+    return createPortal(
+        <div ref={menuRef} className={`profile-menu profile-menu--${placement}`} style={style}
+             role="menu" aria-label="Account">
+            <div className="profile-menu__header">
+                <div className="sidebar__avatar" style={{ background: role.bg, color: role.color }}>
+                    {user.username?.[0]?.toUpperCase() || '?'}
+                </div>
+                <div className="profile-menu__info">
+                    <span className="profile-menu__name">{user.username}</span>
+                    <span className="profile-menu__email">{user.email}</span>
+                    <span className="sidebar__role-badge" style={{ color: role.color, background: role.bg }}>
+                        <Icon name={role.icon} size={11} />
+                        {role.label}
+                    </span>
+                </div>
+            </div>
+            <div className="profile-menu__divider" />
+            <button type="button" role="menuitem" className="profile-menu__signout" onClick={onSignOut}>
+                <Icon name="logout" size={17} />
+                Sign out
+            </button>
+        </div>,
+        document.body
+    );
+};
+
+// ── Sidebar ───────────────────────────────────────────────────────────────────
 const Sidebar = ({ activePage, onNavigate }) => {
     const { user, logout } = useAuth();
-    const [collapsed, setCollapsed] = useState(false);
+    const mode = useScreenMode();
+
+    const [collapsed, setCollapsed] = useState(readCollapsed);   // desktop only
+    const [drawerOpen, setDrawerOpen] = useState(false);         // tablet overlay / phone drawer
+    const [menuOpen, setMenuOpen] = useState(false);             // profile menu
+    const profileRef = useRef(null);
+    const menuButtonRef = useRef(null);
+
+    // Leaving a size class resets the temporary panels
+    useEffect(() => { setDrawerOpen(false); setMenuOpen(false); }, [mode]);
+
+    // Stop the page scrolling behind an open drawer
+    useEffect(() => {
+        const lock = drawerOpen && mode !== 'desktop';
+        document.body.style.overflow = lock ? 'hidden' : '';
+        return () => { document.body.style.overflow = ''; };
+    }, [drawerOpen, mode]);
+
+    // Escape closes the drawer (the profile menu handles its own Escape first)
+    useEffect(() => {
+        if (!drawerOpen) return;
+        const onKey = (e) => { if (e.key === 'Escape' && !menuOpen) closeDrawer(); };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    });
+
+    const closeDrawer = () => {
+        setDrawerOpen(false);
+        setMenuOpen(false);
+        menuButtonRef.current?.focus();
+    };
+
+    const closeMenu = useCallback((returnFocus) => {
+        setMenuOpen(false);
+        if (returnFocus) profileRef.current?.focus();
+    }, []);
 
     if (!user) return null;
 
     const role = ROLE_CONFIG[user.role] || ROLE_CONFIG.normal;
     const userLevel = ROLE_LEVEL[user.role] || 1;
     const visibleNav = NAV_ITEMS.filter(item => userLevel >= ROLE_LEVEL[item.minRole]);
+    const currentLabel = NAV_ITEMS.find(i => i.id === activePage)?.label || '';
 
-    return (
-        <aside className={`sidebar ${collapsed ? 'sidebar--collapsed' : ''}`}>
+    // Compact = icons only
+    const compact = (mode === 'desktop' && collapsed) || (mode === 'tablet' && !drawerOpen);
+    const isOverlay = mode !== 'desktop' && drawerOpen;
 
-            <button
-                className="sidebar__collapse-btn"
-                onClick={() => setCollapsed(p => !p)}
-                title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            >
-                <Icon name={collapsed ? 'expand' : 'collapse'} size={14} />
-            </button>
+    const navigate = (id) => {
+        onNavigate(id);
+        setMenuOpen(false);
+        if (mode !== 'desktop') setDrawerOpen(false);
+    };
 
-            {/* Profile */}
-            <div className="sidebar__profile">
-                <div className="sidebar__avatar" style={{ background: role.bg, color: role.color }}>
-                    {user.username?.[0]?.toUpperCase() || '?'}
-                </div>
-                {!collapsed && (
-                    <div className="sidebar__user-info">
-                        <span className="sidebar__username">{user.username}</span>
-                        <span className="sidebar__email">{user.email}</span>
-                        <span className="sidebar__role-badge" style={{ color: role.color, background: role.bg }}>
-                            <Icon name={role.icon} size={11} />
-                            {role.label}
-                        </span>
-                    </div>
+    const toggleCollapse = () => {
+        if (mode === 'tablet') { setDrawerOpen(o => !o); return; }
+        setCollapsed(c => { saveCollapsed(!c); return !c; });
+        setMenuOpen(false);
+    };
+
+    const handleSignOut = () => {
+        setMenuOpen(false);
+        setDrawerOpen(false);
+        logout();
+    };
+
+    const asideClass = [
+        'sidebar',
+        compact ? 'sidebar--collapsed' : '',
+        mode === 'phone' ? 'sidebar--drawer' : '',
+        isOverlay ? 'sidebar--open' : '',
+        mode === 'tablet' && drawerOpen ? 'sidebar--overlay' : '',
+    ].join(' ');
+
+    const aside = (
+        <aside id="pantau-sidebar" className={asideClass} aria-label="Main navigation"
+               aria-hidden={mode === 'phone' && !drawerOpen ? true : undefined}>
+
+            {mode !== 'phone' && (
+                <button type="button" className="sidebar__collapse-btn" onClick={toggleCollapse}
+                        aria-label={compact ? 'Expand sidebar' : 'Collapse sidebar'}
+                        title={compact ? 'Expand sidebar' : 'Collapse sidebar'}>
+                    <Icon name={compact ? 'expand' : 'collapse'} size={14} />
+                </button>
+            )}
+
+            {/* Brand */}
+            <div className="sidebar__brand" title={BRAND.name}>
+                <PantauLogo size={32} shadow={false} />
+                {!compact && <span className="sidebar__brand-name">{BRAND.name}</span>}
+                {mode === 'phone' && (
+                    <button type="button" className="sidebar__close" onClick={closeDrawer} aria-label="Close menu">
+                        <Icon name="close" size={20} />
+                    </button>
                 )}
             </div>
 
-            <div className="sidebar__divider" />
-
-            {/* Nav — clicking navigates to that page */}
+            {/* Navigation */}
             <nav className="sidebar__nav">
-                {!collapsed && <span className="sidebar__section-label">Tools</span>}
+                {!compact && <span className="sidebar__section-label">Tools</span>}
                 {visibleNav.map(item => (
                     <button
                         key={item.id}
+                        type="button"
                         className={`sidebar__nav-item ${activePage === item.id ? 'active' : ''}`}
-                        onClick={() => onNavigate(item.id)}
-                        title={collapsed ? item.label : ''}
+                        onClick={() => navigate(item.id)}
+                        title={compact ? item.label : ''}
+                        aria-current={activePage === item.id ? 'page' : undefined}
                     >
-                        <span className="nav-icon">
-                            <Icon name={item.icon} size={17} />
-                        </span>
-                        {!collapsed && <span className="nav-label">{item.label}</span>}
-                        {!collapsed && activePage === item.id && <span className="nav-active-dot" />}
+                        <span className="nav-icon"><Icon name={item.icon} size={18} /></span>
+                        {!compact && <span className="nav-label">{item.label}</span>}
+                        {!compact && activePage === item.id && <span className="nav-active-dot" />}
                     </button>
                 ))}
             </nav>
 
-            {/* Footer */}
+            {/* Profile — opens the account menu with Sign out */}
             <div className="sidebar__footer">
                 <div className="sidebar__divider" />
-                <button className="sidebar__logout" onClick={logout} title="Sign out">
-                    <span className="nav-icon">
-                        <Icon name="logout" size={17} />
+                <button
+                    ref={profileRef}
+                    type="button"
+                    className={`sidebar__profile ${menuOpen ? 'is-open' : ''}`}
+                    onClick={() => setMenuOpen(o => !o)}
+                    aria-haspopup="menu"
+                    aria-expanded={menuOpen}
+                    title={compact ? `${user.username} — account` : 'Account'}
+                >
+                    <span className="sidebar__avatar" style={{ background: role.bg, color: role.color }}>
+                        {user.username?.[0]?.toUpperCase() || '?'}
                     </span>
-                    {!collapsed && <span>Sign Out</span>}
+                    {!compact && (
+                        <>
+                            <span className="sidebar__user-info">
+                                <span className="sidebar__username">{user.username}</span>
+                                <span className="sidebar__email">{user.email}</span>
+                            </span>
+                            <span className="sidebar__profile-chevron"><Icon name="chevrons" size={16} /></span>
+                        </>
+                    )}
                 </button>
             </div>
+
+            {menuOpen && (
+                <ProfileMenu
+                    anchorRef={profileRef}
+                    placement={mode === 'phone' ? 'up' : 'side'}
+                    user={user}
+                    role={role}
+                    onSignOut={handleSignOut}
+                    onClose={closeMenu}
+                />
+            )}
         </aside>
+    );
+
+    return (
+        <>
+            {/* Phone: top bar with the menu button */}
+            {mode === 'phone' && (
+                <header className="topbar">
+                    <button ref={menuButtonRef} type="button" className="topbar__menu" onClick={() => setDrawerOpen(true)}
+                            aria-label="Open menu" aria-expanded={drawerOpen} aria-controls="pantau-sidebar">
+                        <Icon name="menu" size={22} />
+                    </button>
+                    <PantauLogo size={30} shadow={false} />
+                    <span className="topbar__title">
+                        <span className="topbar__brand">{BRAND.name}</span>
+                        {currentLabel && <span className="topbar__page">{currentLabel}</span>}
+                    </span>
+                </header>
+            )}
+
+            {/* Tablet keeps a fixed-width slot so the page doesn't jump when the menu expands over it */}
+            {mode === 'tablet' ? <div className="sidebar-slot">{aside}</div> : aside}
+
+            {isOverlay && <div className="sidebar-backdrop" onClick={closeDrawer} aria-hidden="true" />}
+        </>
     );
 };
 
-export default Sidebar;
+export default Sidebar;

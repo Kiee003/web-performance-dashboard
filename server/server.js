@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Web Performance Dashboard — API server entry point.
+// Pantau — API server entry point.
 //
 //   npm start      → run the server
 //   npm run dev    → run with auto-restart on file changes (nodemon)
@@ -49,7 +49,7 @@ if (config.isProduction && hasClientBuild) {
 } else {
     app.get('/', (req, res) => {
         res.json({
-            message: 'Web Performance Dashboard API',
+            message: 'Pantau API',
             version: '2.1.0',
             note: 'Open the dashboard at http://localhost:3000 (React dev server)',
             check: '/api/test'

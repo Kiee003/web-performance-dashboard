@@ -25,7 +25,7 @@ router.get('/health', async (req, res) => {
             data: {
                 status: 'healthy',
                 timestamp: new Date().toISOString(),
-                service: 'Web Performance Dashboard',
+                service: 'Pantau',
                 database: 'connected',
                 total_audits: stats?.total_audits || 0,
                 total_websites: stats?.total_websites || 0

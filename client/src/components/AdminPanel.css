@@ -321,22 +321,101 @@
 .role-legend {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 6px 20px;
     font-size: 0.78rem;
     color: #666;
     flex-wrap: wrap;
 }
 
-/* ── Mobile ───────────────────────────────────────────── */
+/* Each role keeps its name and description together */
+.role-legend__item { display: inline-flex; align-items: center; gap: 6px; }
+.role-legend__name {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.role-legend__desc::before { content: "\2014  "; color: #aaa; }
+
+/* Phone & tablet: one role per line, names lined up in a column */
+@media (max-width: 1024px) {
+    .role-legend {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 8px 12px;
+    }
+    .role-legend__item { display: contents; }
+    .role-legend__desc { line-height: 1.4; }
+    .role-legend__desc::before { content: none; }
+}
+
+/* ── Tablet: tighter cells so all columns fit ─────────── */
+@media (max-width: 1024px) {
+    .users-table th, .users-table td { padding-left: 10px; padding-right: 10px; }
+    .text-muted { white-space: normal; }
+}
+
+/* ── Phone: each account becomes a card ───────────────────
+       [A] Ali  you                        [delete]
+       Role             [User ▾]
+       Assigned users   [2 assigned ▾]
+       Audits           6
+       Joined           2 Oct 2026
+       Last login       2 Oct 2026                         */
 @media (max-width: 700px) {
-    .users-table th:nth-child(5),
-    .users-table td:nth-child(5),
-    .users-table th:nth-child(6),
-    .users-table td:nth-child(6) {
-        display: none;
+    .admin-subheader { padding: 12px 16px; }
+
+    .users-table thead { display: none; }
+    .users-table, .users-table tbody { display: block; }
+
+    .users-table tr.user-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        row-gap: 2px;
+        padding: 14px 16px;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    .users-table tr.self-row { background: #f8f4ff; }
+
+    .users-table td {
+        padding: 0;
+        border: none;
+        background: none !important;
+        min-width: 0;
     }
 
-    .assign-checklist {
-        grid-template-columns: 1fr;
+    .ut-user    { grid-column: 1; grid-row: 1; padding-bottom: 8px !important; }
+    .ut-actions { grid-column: 2; grid-row: 1; align-self: start; }
+
+    /* Label on the left, value on the right */
+    .users-table td[data-label] {
+        grid-column: 1 / -1;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        min-height: 40px;
+        border-top: 1px dashed #eee;
+        text-align: right;
     }
-}
+    .users-table td[data-label]::before {
+        content: attr(data-label);
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #888;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        text-align: left;
+    }
+    .users-table .text-muted { white-space: nowrap; }
+
+    .confirm-delete { flex-wrap: wrap; justify-content: flex-end; }
+
+    .assign-detail-row, .assign-detail-row td { display: block; }
+    .assign-detail { padding: 14px 16px; }
+    .assign-checklist { grid-template-columns: 1fr; }
+    .assign-item { min-height: 48px; }
+
+    .admin-footer { padding: 12px 16px; }
+}

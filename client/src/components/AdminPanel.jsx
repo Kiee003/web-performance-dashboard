@@ -217,8 +217,8 @@ const AdminPanel = () => {
 
                                 return (
                                     <React.Fragment key={u.id}>
-                                        <tr className={isSelf ? 'self-row' : ''}>
-                                            <td>
+                                        <tr className={`user-row ${isSelf ? 'self-row' : ''}`}>
+                                            <td className="ut-user">
                                                 <div className="user-cell">
                                                     <div className="table-avatar" style={{ background: roleInfo.bg, color: roleInfo.color }}>
                                                         {u.username?.[0]?.toUpperCase()}
@@ -233,12 +233,13 @@ const AdminPanel = () => {
                                                 </div>
                                             </td>
 
-                                            <td>
+                                            <td className="ut-role" data-label="Role">
                                                 {isAdmin && !isSelf ? (
                                                     <select
                                                         className="role-select"
                                                         value={u.role}
                                                         onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                                                        aria-label={`Role for ${u.username}`}
                                                         style={{ color: roleInfo.color, borderColor: roleInfo.color }}
                                                     >
                                                         <option value="normal">User</option>
@@ -255,11 +256,12 @@ const AdminPanel = () => {
                                                 )}
                                             </td>
 
-                                            <td>
+                                            <td className="ut-assign" data-label="Assigned users">
                                                 {isModerator ? (
                                                     <button
                                                         className="assign-toggle"
                                                         onClick={() => setExpandedModerator(prev => prev === u.id ? null : u.id)}
+                                                        aria-expanded={isExpanded}
                                                     >
                                                         {assignedCount} assigned
                                                         <span style={{ display: 'flex', marginLeft: '4px' }}>
@@ -271,12 +273,12 @@ const AdminPanel = () => {
                                                 )}
                                             </td>
 
-                                            <td className="text-center">{u.audit_count || 0}</td>
-                                            <td className="text-muted">{formatDate(u.created_at)}</td>
-                                            <td className="text-muted">{formatDate(u.last_login)}</td>
+                                            <td className="text-center ut-audits" data-label="Audits">{u.audit_count || 0}</td>
+                                            <td className="text-muted ut-joined" data-label="Joined">{formatDate(u.created_at)}</td>
+                                            <td className="text-muted ut-login" data-label="Last login">{formatDate(u.last_login)}</td>
 
                                             {isAdmin && (
-                                                <td>
+                                                <td className="ut-actions">
                                                     {!isSelf && (
                                                         confirmDelete === u.id ? (
                                                             <div className="confirm-delete">
@@ -289,6 +291,7 @@ const AdminPanel = () => {
                                                                 className="btn-delete"
                                                                 onClick={() => setConfirmDelete(u.id)}
                                                                 title="Delete user"
+                                                                aria-label={`Delete ${u.username}`}
                                                             >
                                                                 {Icons.trash}
                                                             </button>
@@ -355,18 +358,18 @@ const AdminPanel = () => {
             {/* Legend */}
             <div className="admin-footer">
                 <div className="role-legend">
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: ROLE_CONFIG.normal.color, fontWeight: 600 }}>
-                        {Icons.user} User
-                    </span>
-                    — run audits, own history
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: ROLE_CONFIG.moderator.color, fontWeight: 600 }}>
-                        {Icons.moderator} Moderator
-                    </span>
-                    — + assigned users' audit data
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: ROLE_CONFIG.admin.color, fontWeight: 600 }}>
-                        {Icons.admin} Admin
-                    </span>
-                    — + manage accounts &amp; assignments
+                    {[
+                        ['normal',    Icons.user,      'User',      'run audits, own history'],
+                        ['moderator', Icons.moderator, 'Moderator', "+ assigned users' audit data"],
+                        ['admin',     Icons.admin,     'Admin',     '+ manage accounts & assignments'],
+                    ].map(([key, icon, name, desc]) => (
+                        <div key={key} className="role-legend__item">
+                            <span className="role-legend__name" style={{ color: ROLE_CONFIG[key].color }}>
+                                {icon} {name}
+                            </span>
+                            <span className="role-legend__desc">{desc}</span>
+                        </div>
+                    ))}
                 </div>
             </div>
         </div>

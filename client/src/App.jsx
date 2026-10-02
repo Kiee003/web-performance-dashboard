@@ -2,6 +2,7 @@ import React from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Dashboard from './components/Dashboard';
 import LoginPage from './components/LoginPage';
+import { PantauLogo } from './components/Logo';
 
 const AppContent = () => {
     const { user, loading } = useAuth();
@@ -16,8 +17,8 @@ const AppContent = () => {
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
             }}>
                 <div style={{ textAlign: 'center', color: 'white' }}>
-                    <div style={{ fontSize: '2rem', marginBottom: '10px' }}>🚀</div>
-                    <p style={{ fontSize: '1.1rem' }}>Loading...</p>
+                    <PantauLogo size={64} shadow={false} />
+                    <p style={{ fontSize: '1.1rem', marginTop: '14px' }}>Loading Pantau...</p>
                 </div>
             </div>
         );

@@ -1,8 +1,8 @@
 {
-  "name": "web-performance-dashboard",
+  "name": "pantau",
   "version": "2.1.0",
   "private": true,
-  "description": "Web Performance Dashboard using Google Lighthouse with DeepSeek AI \u2014 Final Year Project",
+  "description": "Pantau — web performance audits with Google Lighthouse and DeepSeek AI (Final Year Project)",
   "author": "Muhammad Alif Marzuki bin Rizuan",
   "scripts": {
     "setup": "npm install && npm install --prefix server && npm install --prefix client",

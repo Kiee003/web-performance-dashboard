@@ -72,35 +72,40 @@ export const testConnection = async () => {
 
 // ─── AUDITS ──────────────────────────────────────────────────────────────────
 
-export const runAudit = async (url) => {
+// options: { formFactor: 'mobile' | 'desktop', runs: 1 | 3 | 5 }
+export const runAudit = async (url, { formFactor = 'mobile', runs = 1 } = {}) => {
+    let auditUrl = url.trim();
+    if (!auditUrl.startsWith('http://') && !auditUrl.startsWith('https://')) {
+        auditUrl = 'https://' + auditUrl;
+    }
+
     try {
-        console.log('📤 Sending audit request for:', url);
-
-        let auditUrl = url;
-        if (!url.startsWith('http://') && !url.startsWith('https://')) {
-            auditUrl = 'https://' + url;
-            console.log('🔧 Added https://, now:', auditUrl);
-        }
-
-        const response = await API.post('/api/audit', { url: auditUrl });
-        console.log('✅ Audit complete:', response.data);
+        const response = await API.post(
+            '/api/audit',
+            { url: auditUrl, formFactor, runs },
+            // Each Lighthouse run can take up to ~2 minutes
+            { timeout: runs * 130000 + 30000 }
+        );
         return response.data;
     } catch (error) {
-        console.error('❌ Audit failed:', error.response?.data || error.message);
-        if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
-            throw new Error('Audit took too long. Please try again.');
+        if (error.code === 'ECONNABORTED') {
+            throw new Error('The audit took too long. Try fewer runs.');
         }
-        throw error;
+        // Prefer the server's explanation (e.g. "Lighthouse could not audit this page: ...")
+        throw new Error(error.response?.data?.error || error.message);
     }
 };
 
-export const getTrendData = async (url, limit = 10) => {
-    const response = await API.get(`/api/trend/${encodeURIComponent(url)}?limit=${limit}`);
+// formFactor keeps mobile and desktop results apart (they are not comparable)
+export const getTrendData = async (url, limit = 10, formFactor = null) => {
+    const ff = formFactor ? `&formFactor=${formFactor}` : '';
+    const response = await API.get(`/api/trend/${encodeURIComponent(url)}?limit=${limit}${ff}`);
     return response.data;
 };
 
-export const getAuditHistory = async (url, limit = 20) => {
-    const response = await API.get(`/api/history/${encodeURIComponent(url)}?limit=${limit}`);
+export const getAuditHistory = async (url, limit = 20, formFactor = null) => {
+    const ff = formFactor ? `&formFactor=${formFactor}` : '';
+    const response = await API.get(`/api/history/${encodeURIComponent(url)}?limit=${limit}${ff}`);
     return response.data;
 };
 
@@ -127,6 +132,37 @@ export const getAllWebsites = async () => {
 export const getStatistics = async () => {
     const response = await API.get('/api/statistics');
     return response.data;
+};
+
+// ─── FULL LIGHTHOUSE REPORT ──────────────────────────────────────────────────
+
+// Opens the original Lighthouse HTML report in a new tab. The report endpoint
+// needs the login token, so it is fetched here and shown from memory.
+export const openLighthouseReport = async (auditId) => {
+    // Open the tab immediately (inside the click) so pop-up blockers allow it
+    const tab = window.open('', '_blank');
+    try {
+        const response = await API.get(`/api/audit/${auditId}/report`, { responseType: 'blob' });
+        const blobUrl = URL.createObjectURL(new Blob([response.data], { type: 'text/html' }));
+        if (tab) tab.location.href = blobUrl; else window.location.href = blobUrl;
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+    } catch (error) {
+        if (tab) tab.close();
+        let message = error.message;
+        try { message = JSON.parse(await error.response.data.text()).error; } catch {}
+        throw new Error(message);
+    }
+};
+
+// Downloads the raw Lighthouse result (opens in https://googlechrome.github.io/lighthouse/viewer/)
+export const downloadLighthouseJson = async (auditId) => {
+    const response = await API.get(`/api/audit/${auditId}/report.json`, { responseType: 'blob' });
+    const blobUrl = URL.createObjectURL(response.data);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = `lighthouse_audit_${auditId}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
 };
 
 // ─── COMPARE & CRAWLER ───────────────────────────────────────────────────────

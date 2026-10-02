@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import API from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import ExportButton from './ExportButton';
+import ReportButtons from './ReportButtons';
+import ReliabilityNotice, { ReliabilityBadge } from './ReliabilityNotice';
+import { formatSeconds, formatCls, formatScore, normalizeAudit } from '../utils/metrics';
 import './UserAuditManager.css';
 
 // ── SVG icons ─────────────────────────────────────────────────────────────────
@@ -223,31 +226,34 @@ const UserAuditManager = () => {
                                 <React.Fragment key={audit.id}>
                                     <tr className={expandedAudit === audit.id ? 'uam__row--expanded' : ''}>
                                         <td className="uam__id">#{audit.id}</td>
-                                        <td>
+                                        <td className="uam__cell-user">
                                             <div className="uam__user-cell">
                                                 <span className="uam__uname">{audit.username || '—'}</span>
                                                 <span className="uam__uemail">{audit.email || 'Unknown'}</span>
                                             </div>
                                         </td>
-                                        <td>
+                                        <td className="uam__cell-url">
                                             <button
                                                 className="uam__url-btn"
                                                 onClick={() => setExpandedAudit(prev => prev === audit.id ? null : audit.id)}
+                                                aria-expanded={expandedAudit === audit.id}
                                                 title={audit.url}
                                             >
                                                 {audit.url?.replace(/https?:\/\//, '').substring(0, 35)}
                                                 {audit.url?.length > 40 ? '…' : ''}
                                             </button>
                                         </td>
-                                        <td>
+                                        <td className="uam__cell-score">
                                             <span style={getScoreStyle(audit.performance_score)}>
-                                                {audit.performance_score}/100
+                                                {formatScore(audit.performance_score)}
                                             </span>
+                                            {audit.reliability && audit.reliability !== 'ok' && <ReliabilityBadge level={audit.reliability} />}
                                         </td>
                                         <td className="uam__date">{formatDate(audit.created_at)}</td>
-                                        <td>
+                                        <td className="uam__cell-actions">
                                             <div className="uam__actions">
                                                 <ExportButton auditId={audit.id} type="single" />
+                                                {audit.has_report ? <ReportButtons auditId={audit.id} hasReport compact /> : null}
                                                 {confirmDelete === audit.id ? (
                                                     <div className="uam__confirm">
                                                         <button className="uam__btn uam__btn--yes" onClick={() => handleDelete(audit.id)}>Yes</button>
@@ -298,11 +304,15 @@ const UserAuditManager = () => {
                                                     </div>
                                                     <div className="uam__metrics">
                                                         {[
-                                                            { label: 'LCP',  val: `${(audit.lcp  / 1000).toFixed(2)}s` },
-                                                            { label: 'FCP',  val: `${(audit.fcp  / 1000).toFixed(2)}s` },
-                                                            { label: 'CLS',  val: audit.cls?.toFixed(3) },
-                                                            { label: 'TBT',  val: `${(audit.tbt  / 1000).toFixed(2)}s` },
-                                                            { label: 'Reqs', val: audit.requests },
+                                                            { label: 'LCP',  val: formatSeconds(audit.lcp) },
+                                                            { label: 'FCP',  val: formatSeconds(audit.fcp) },
+                                                            { label: 'TBT',  val: formatSeconds(audit.tbt) },
+                                                            { label: 'CLS',  val: formatCls(audit.cls) },
+                                                            { label: 'SI',   val: formatSeconds(audit.speed_index) },
+                                                            { label: 'TTFB', val: formatSeconds(audit.ttfb) },
+                                                            { label: 'Reqs', val: audit.requests ?? 'N/A' },
+                                                            { label: 'Device', val: audit.form_factor || 'mobile (default)' },
+                                                            { label: 'Runs', val: audit.runs || 1 },
                                                         ].map(m => (
                                                             <div key={m.label} className="uam__metric-chip">
                                                                 <span className="uam__metric-label">{m.label}</span>
@@ -310,6 +320,7 @@ const UserAuditManager = () => {
                                                             </div>
                                                         ))}
                                                     </div>
+                                                    <ReliabilityNotice reliability={normalizeAudit(audit).reliability} />
                                                     {audit.ai_summary && (
                                                         <div className="uam__ai-summary">
                                                             <strong>AI Summary:</strong> {audit.ai_summary.substring(0, 300)}{audit.ai_summary.length > 300 ? '…' : ''}

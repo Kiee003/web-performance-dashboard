@@ -3,6 +3,7 @@ import API from '../services/api';
 import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { normalizeAudit, metricStatus, describeSettings, formatSeconds, formatCls, METRIC_DEFS, RELIABILITY } from '../utils/metrics';
 
 // Severity styling for the "What To Fix" table, mirroring AIInsights on screen
 const SEVERITY_META = {
@@ -44,6 +45,23 @@ const formatRecommendationsForCsv = (raw) => {
         }
         return parts.join(' ');
     }).join(' || ');
+};
+
+// The logo PNG for PDF headers, loaded once from /logo192.png
+let logoDataUrl = null;
+const loadLogo = async () => {
+    if (logoDataUrl) return;
+    try {
+        const blob = await (await fetch('/logo192.png')).blob();
+        logoDataUrl = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    } catch {
+        logoDataUrl = null;   // header still works without it
+    }
 };
 
 const fmtSec = (ms) => (ms === undefined || ms === null) ? '' : (ms / 1000).toFixed(2);
@@ -126,24 +144,35 @@ const ExportButton = ({ auditId, url, type = 'single', audits = null, label = nu
             'id', 'url',
             ...(hasUser ? ['username', 'email'] : []),
             'timestamp', 'performance_score',
-            'lcp(s)', 'fcp(s)', 'cls', 'tbt(s)', 'requests',
+            'lcp(s)', 'fcp(s)', 'cls', 'tbt(s)', 'speed_index(s)', 'ttfb(s)', 'requests',
+            'device', 'runs', 'lighthouse_version', 'reliability', 'reliability_notes',
             'ai_summary', 'ai_recommendations',
         ];
 
-        const lines = rows.map(a => [
-            a.id,
-            csvCell(a.url),
-            ...(hasUser ? [csvCell(a.username), csvCell(a.email)] : []),
-            a.created_at,
-            a.performance_score,
-            fmtSec(a.lcp),
-            fmtSec(a.fcp),
-            a.cls !== undefined && a.cls !== null ? Number(a.cls).toFixed(3) : '',
-            fmtSec(a.tbt),
-            a.requests ?? '',
-            csvCell(a.ai_summary),
-            csvCell(formatRecommendationsForCsv(a.ai_recommendations)),
-        ].join(','));
+        const lines = rows.map(a => {
+            const n = normalizeAudit(a);
+            return [
+                a.id,
+                csvCell(a.url),
+                ...(hasUser ? [csvCell(a.username), csvCell(a.email)] : []),
+                a.created_at,
+                a.performance_score ?? '',
+                fmtSec(a.lcp),
+                fmtSec(a.fcp),
+                a.cls !== undefined && a.cls !== null ? Number(a.cls).toFixed(3) : '',
+                fmtSec(a.tbt),
+                fmtSec(a.speed_index),
+                fmtSec(a.ttfb),
+                a.requests ?? '',
+                a.form_factor ?? '',
+                a.runs ?? '',
+                a.lighthouse_version ?? '',
+                a.reliability ?? '',
+                csvCell((n.reliability.notes || []).join(' | ')),
+                csvCell(a.ai_summary),
+                csvCell(formatRecommendationsForCsv(a.ai_recommendations)),
+            ].join(',');
+        });
 
         return [headers.join(','), ...lines].join('\n');
     };
@@ -180,17 +209,6 @@ const ExportButton = ({ auditId, url, type = 'single', audits = null, label = nu
     };
 
     // ── PDF helpers ───────────────────────────────────────────────────────────
-    const getStatus = (metric, value) => {
-        if (value === null || value === undefined) return 'No Data';
-        switch (metric) {
-            case 'lcp':  return value < 2500 ? 'Good' : value < 4000 ? 'Needs Improvement' : 'Poor';
-            case 'fcp':  return value < 1800 ? 'Good' : value < 3000 ? 'Needs Improvement' : 'Poor';
-            case 'cls':  return value < 0.1 ? 'Good' : value < 0.25 ? 'Needs Improvement' : 'Poor';
-            case 'tbt':  return value < 300 ? 'Good' : value < 600 ? 'Needs Improvement' : 'Poor';
-            default:     return 'N/A';
-        }
-    };
-
     const statusColor = (status) => {
         if (status === 'Good' || status === 'Normal') return [40, 167, 69];
         if (status === 'Needs Improvement')           return [255, 153, 0];
@@ -206,13 +224,19 @@ const ExportButton = ({ auditId, url, type = 'single', audits = null, label = nu
         doc.rect(0, 0, pageW, 28, 'F');
         doc.setFillColor(118, 75, 162);
         doc.rect(pageW * 0.6, 0, pageW * 0.4, 28, 'F');
+        // Logo tile (falls back to text only if the image couldn't be loaded)
+        let textX = margin;
+        if (logoDataUrl) {
+            doc.addImage(logoDataUrl, 'PNG', margin, 5, 18, 18);
+            textX = margin + 22;
+        }
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
-        doc.text('Web Performance Dashboard', margin, 12);
+        doc.text('Pantau', textX, 12.5);
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
-        doc.text('Audit Report', margin, 20);
+        doc.text('Web Performance Audit Report', textX, 20);
         doc.setFontSize(8);
         doc.text(new Date().toLocaleString(), pageW - margin, 20, { align: 'right' });
     };
@@ -225,7 +249,7 @@ const ExportButton = ({ auditId, url, type = 'single', audits = null, label = nu
             doc.setFontSize(7);
             doc.setTextColor(180, 180, 180);
             doc.text(
-                `Web Performance Dashboard  •  Page ${i} of ${totalPages}  •  Generated ${new Date().toLocaleString()}`,
+                `Pantau  •  Page ${i} of ${totalPages}  •  Generated ${new Date().toLocaleString()}`,
                 pageW / 2,
                 doc.internal.pageSize.getHeight() - 8,
                 { align: 'center' }
@@ -233,25 +257,58 @@ const ExportButton = ({ auditId, url, type = 'single', audits = null, label = nu
         }
     };
 
+    // Shows how the audit was produced and whether it can be trusted.
+    // Returns the y position below what it drew.
+    const drawConditions = (doc, audit, y, margin, pageW) => {
+        const n = normalizeAudit(audit);
+        const width = pageW - margin * 2;
+
+        doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(90, 90, 90);
+        const cond = doc.splitTextToSize(`Test conditions: ${describeSettings(n)}`, width);
+        doc.text(cond, margin, y);
+        y += cond.length * 3.6 + 2;
+
+        const level = n.reliability.level;
+        if (level && level !== 'ok') {
+            const color = level === 'unreliable' ? [185, 28, 28] : [180, 83, 9];
+            const lines = doc.splitTextToSize(
+                `${RELIABILITY[level].label.toUpperCase()}: ${(n.reliability.notes || []).join(' ')}`, width - 6);
+            const h = lines.length * 3.6 + 4;
+            doc.setFillColor(...(level === 'unreliable' ? [254, 226, 226] : [254, 243, 199]));
+            doc.roundedRect(margin, y - 1, width, h, 1.5, 1.5, 'F');
+            doc.setTextColor(...color); doc.setFont('helvetica', 'bold');
+            doc.text(lines, margin + 3, y + 2.5);
+            doc.setFont('helvetica', 'normal');
+            y += h + 3;
+        }
+        return y;
+    };
+
     const drawMetricsTable = (doc, audit, startY, margin, pageW) => {
+        const n = normalizeAudit(audit);
         const metrics = [
-            { label: 'LCP',      key: 'lcp',      val: audit.lcp   ? `${(audit.lcp  /1000).toFixed(2)}s` : 'N/A', target: '< 2.5s', full: 'Largest Contentful Paint' },
-            { label: 'FCP',      key: 'fcp',      val: audit.fcp   ? `${(audit.fcp  /1000).toFixed(2)}s` : 'N/A', target: '< 1.8s', full: 'First Contentful Paint' },
-            { label: 'CLS',      key: 'cls',      val: audit.cls !== undefined ? audit.cls.toFixed(3) : 'N/A',      target: '< 0.1',  full: 'Cumulative Layout Shift' },
-            { label: 'TBT',      key: 'tbt',      val: audit.tbt   ? `${(audit.tbt  /1000).toFixed(2)}s` : 'N/A', target: '< 0.3s', full: 'Total Blocking Time' },
-            { label: 'Requests', key: 'requests', val: String(audit.requests || 0),                                 target: '< 50',   full: 'Total Network Requests' },
+            ...METRIC_DEFS.map(m => {
+                const st = metricStatus(m.key, n.metrics[m.key], n.metricScores?.[m.key]).status;
+                return {
+                    label: m.short, full: m.label,
+                    // The PDF's built-in font has no "≤" glyph
+                    target: m.target.replace('≤', '<='),
+                    val: m.format(n.metrics[m.key]),
+                    status: st === 'Not measured' ? 'N/A' : st,
+                };
+            }),
+            {
+                label: 'Requests', full: 'Total Network Requests', target: '< 50',
+                val: n.requests.total ?? 'N/A',
+                status: n.requests.total === null ? 'N/A' : (n.requests.total > 100 ? 'High' : 'Normal'),
+            },
         ];
 
         autoTable(doc, {
             startY,
             margin: { left: margin, right: margin },
             head: [['Metric', 'Description', 'Value', 'Target', 'Status']],
-            body: metrics.map(m => {
-                const status = m.key === 'requests'
-                    ? (audit.requests > 100 ? 'High' : 'Normal')
-                    : getStatus(m.key, audit[m.key]);
-                return [m.label, m.full, m.val, m.target, status];
-            }),
+            body: metrics.map(m => [m.label, m.full, String(m.val), m.target, m.status]),
             headStyles: { fillColor: [102, 126, 234], textColor: 255, fontStyle: 'bold', fontSize: 9 },
             bodyStyles: { fontSize: 9, textColor: [50, 50, 50] },
             columnStyles: {
@@ -376,7 +433,7 @@ const ExportButton = ({ auditId, url, type = 'single', audits = null, label = nu
         const auditDate = audit.created_at ? new Date(audit.created_at).toLocaleString() : '';
         doc.text(`${audit.url || 'N/A'}  —  ${auditDate}`, margin, y + 6);
 
-        const score = audit.performance_score || 0;
+        const score = audit.performance_score ?? 0;
         doc.setFillColor(...scoreColorOf(score));
         doc.roundedRect(pageW - margin - 28, y - 6, 28, 16, 3, 3, 'F');
         doc.setTextColor(255,255,255);
@@ -389,6 +446,8 @@ const ExportButton = ({ auditId, url, type = 'single', audits = null, label = nu
         doc.setDrawColor(220, 220, 220);
         doc.line(margin, y, pageW - margin, y);
         y += 8;
+
+        y = drawConditions(doc, audit, y, margin, pageW) + 2;
 
         doc.setTextColor(50,50,50); doc.setFontSize(11); doc.setFont('helvetica', 'bold');
         doc.text('Performance Metrics', margin, y);
@@ -454,12 +513,13 @@ const ExportButton = ({ auditId, url, type = 'single', audits = null, label = nu
             ];
             if (showUrl) base.push((a.url || '').replace(/^https?:\/\//, ''));
             base.push(
-                `${a.performance_score}/100`,
-                a.lcp ? `${(a.lcp/1000).toFixed(2)}s` : 'N/A',
-                a.fcp ? `${(a.fcp/1000).toFixed(2)}s` : 'N/A',
-                a.cls !== undefined && a.cls !== null ? Number(a.cls).toFixed(3) : 'N/A',
-                a.tbt ? `${(a.tbt/1000).toFixed(2)}s` : 'N/A',
-                a.requests || 0,
+                // * marks audits flagged unreliable (explained under the table)
+                `${a.performance_score ?? 'N/A'}/100${a.reliability === 'unreliable' ? '*' : ''}`,
+                formatSeconds(a.lcp),
+                formatSeconds(a.fcp),
+                formatCls(a.cls),
+                formatSeconds(a.tbt),
+                a.requests ?? 'N/A',
             );
             return base;
         });
@@ -514,6 +574,13 @@ const ExportButton = ({ auditId, url, type = 'single', audits = null, label = nu
             alternateRowStyles: { fillColor: [248, 249, 250] },
         });
 
+        if (rows.some(a => a.reliability === 'unreliable')) {
+            const fy = doc.lastAutoTable.finalY + 5;
+            doc.setFontSize(7.5); doc.setFont('helvetica', 'italic'); doc.setTextColor(185, 28, 28);
+            doc.text('* Flagged unreliable: some timings could not be measured correctly. See the audit\'s detail page.', margin, fy);
+            doc.setFont('helvetica', 'normal');
+        }
+
         // One detail page per audit that has AI content
         rows.forEach((audit, index) => {
             const hasRecs = parseRecommendations(audit.ai_recommendations).length > 0;
@@ -535,12 +602,12 @@ const ExportButton = ({ auditId, url, type = 'single', audits = null, label = nu
             doc.setTextColor(130, 130, 130);
             doc.text(audit.created_at ? new Date(audit.created_at).toLocaleString() : '', margin, 11);
 
-            const sc = audit.performance_score || 0;
-            doc.setTextColor(...scoreColorOf(sc));
+            const sc = audit.performance_score;
+            doc.setTextColor(...scoreColorOf(sc ?? 0));
             doc.setFontSize(10); doc.setFont('helvetica', 'bold');
-            doc.text(`Score: ${sc}/100`, pageW - margin, 9, { align: 'right' });
+            doc.text(`Score: ${sc ?? 'N/A'}/100`, pageW - margin, 9, { align: 'right' });
 
-            let ay = 22;
+            let ay = drawConditions(doc, audit, 20, margin, pageW) + 1;
             drawMetricsTable(doc, audit, ay, margin, pageW);
             ay = doc.lastAutoTable.finalY + 8;
             ay = drawAISummary(doc, audit, ay, margin, pageW);
@@ -555,6 +622,7 @@ const ExportButton = ({ auditId, url, type = 'single', audits = null, label = nu
     const exportAsPDF = async () => {
         setExporting(true);
         try {
+            await loadLogo();
             if (type === 'single') {
                 const audit = await fetchSingleAudit();
                 await exportSinglePDF(audit);
@@ -573,54 +641,17 @@ const ExportButton = ({ auditId, url, type = 'single', audits = null, label = nu
     // ── Button styles ─────────────────────────────────────────────────────────
     const disabled = exporting || (isList && listRows.length === 0);
 
-    const btnBase = {
-        padding: '5px 12px',
-        border: 'none',
-        borderRadius: '5px',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        fontSize: '12px',
-        fontWeight: '600',
-        transition: 'opacity 0.2s',
-        opacity: disabled ? 0.5 : 1,
-        letterSpacing: '0.3px',
-        whiteSpace: 'nowrap',
-    };
-
-    const hoverOn  = e => { if (!disabled) e.currentTarget.style.opacity = '0.82'; };
-    const hoverOff = e => { if (!disabled) e.currentTarget.style.opacity = '1'; };
-
+    // Styles live in Dashboard.css (.export-buttons) so phones can enlarge them
     return (
-        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-            {label && (
-                <span style={{ fontSize: '11px', color: '#888', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                    {label}
-                </span>
-            )}
-            <button
-                onClick={exportAsJSON}
-                disabled={disabled}
-                style={{ ...btnBase, backgroundColor: '#2196f3', color: 'white' }}
-                onMouseEnter={hoverOn}
-                onMouseLeave={hoverOff}
-            >
+        <div className="export-buttons">
+            {label && <span className="export-buttons__label">{label}</span>}
+            <button type="button" className="export-buttons__json" onClick={exportAsJSON} disabled={disabled}>
                 {exporting ? '...' : 'JSON'}
             </button>
-            <button
-                onClick={exportAsCSV}
-                disabled={disabled}
-                style={{ ...btnBase, backgroundColor: '#4caf50', color: 'white' }}
-                onMouseEnter={hoverOn}
-                onMouseLeave={hoverOff}
-            >
+            <button type="button" className="export-buttons__csv" onClick={exportAsCSV} disabled={disabled}>
                 {exporting ? '...' : 'CSV'}
             </button>
-            <button
-                onClick={exportAsPDF}
-                disabled={disabled}
-                style={{ ...btnBase, backgroundColor: '#e53935', color: 'white' }}
-                onMouseEnter={hoverOn}
-                onMouseLeave={hoverOff}
-            >
+            <button type="button" className="export-buttons__pdf" onClick={exportAsPDF} disabled={disabled}>
                 {exporting ? '...' : 'PDF'}
             </button>
         </div>

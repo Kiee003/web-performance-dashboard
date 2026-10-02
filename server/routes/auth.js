@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const router = express.Router();
 
 const database = require('../db/database');
+const reportStore = require('../services/reportStore');
 const { verifyToken, requireMinRole, requireRole, signToken } = require('../middleware/auth');
 
 // ─── REGISTER ─────────────────────────────────────────────────────────────────
@@ -137,7 +138,9 @@ router.delete('/users/:id', verifyToken, requireRole('admin'), (req, res) => {
             return res.status(400).json({ success: false, error: 'You cannot delete your own account' });
         }
 
+        const auditIds = database.getAuditIdsForUser(parseInt(id));
         const deleted = database.deleteUser(parseInt(id));
+        if (deleted) reportStore.remove(auditIds);
         if (!deleted) {
             return res.status(404).json({ success: false, error: 'User not found' });
         }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Line } from 'react-chartjs-2';
 import {
     Chart as ChartJS,
@@ -45,7 +45,23 @@ const linePoint = (color) => ({
     tension: 0.4,
 });
 
+// True on phone-sized screens — the chart drops its axis titles and long
+// heading there so the lines get the space
+const PHONE_QUERY = '(max-width: 640px)';
+const useIsPhone = () => {
+    const [isPhone, setIsPhone] = useState(() => window.matchMedia(PHONE_QUERY).matches);
+    useEffect(() => {
+        const mq = window.matchMedia(PHONE_QUERY);
+        const update = () => setIsPhone(mq.matches);
+        mq.addEventListener('change', update);
+        return () => mq.removeEventListener('change', update);
+    }, []);
+    return isPhone;
+};
+
 const PerformanceChart = ({ trendData, title = 'Performance Trend' }) => {
+    const isPhone = useIsPhone();
+
     if (!trendData || !trendData.labels || trendData.labels.length === 0) {
         return (
             <div className="chart-container" style={{ padding: '20px', textAlign: 'center', color: '#888' }}>
@@ -103,12 +119,12 @@ const PerformanceChart = ({ trendData, title = 'Performance Trend' }) => {
                 labels: {
                     usePointStyle: true,
                     boxWidth: 8,
-                    padding: 16,
-                    font: { size: 11 },
+                    padding: isPhone ? 10 : 16,
+                    font: { size: isPhone ? 10 : 11 },
                 },
             },
             title: {
-                display: true,
+                display: !isPhone,
                 text: title,
                 font: { size: 14, weight: 'normal' },
                 color: '#888',
@@ -130,7 +146,7 @@ const PerformanceChart = ({ trendData, title = 'Performance Trend' }) => {
             y: {
                 position: 'left',
                 title: {
-                    display: true,
+                    display: !isPhone,
                     text: 'Performance Score',
                     color: '#4caf50',
                 },
@@ -144,7 +160,7 @@ const PerformanceChart = ({ trendData, title = 'Performance Trend' }) => {
             y1: {
                 position: 'right',
                 title: {
-                    display: true,
+                    display: !isPhone,
                     text: 'Time (seconds)',
                     color: '#ff9800',
                 },
@@ -158,13 +174,13 @@ const PerformanceChart = ({ trendData, title = 'Performance Trend' }) => {
             },
             x: {
                 grid: { display: false },
-                ticks: { color: '#999', font: { size: 10 }, maxRotation: 0 },
+                ticks: { color: '#999', font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: isPhone ? 4 : 10 },
             },
         }
     };
 
     return (
-        <div style={{ height: '420px', marginTop: '20px' }}>
+        <div className="perf-chart">
             <Line data={chartData} options={options} />
         </div>
     );
