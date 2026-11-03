@@ -18,10 +18,12 @@ const { sec, cls3 } = require('../utils/format');
 
 // Allowed audit options (anything else is rejected)
 const FORM_FACTORS = ['mobile', 'desktop'];
-const RUN_COUNTS = [1, 3, 5];
+// How many times Lighthouse may run: 1 (fastest) up to 10
+const MIN_RUNS = 1;
+const MAX_RUNS = 10;
 
 // ── RUN AUDIT — all authenticated users ──────────────────────────────────────
-// Body: { url, formFactor?: 'mobile'|'desktop', runs?: 1|3|5 }
+// Body: { url, formFactor?: 'mobile'|'desktop', runs?: 1–10 }
 //
 // Two response styles:
 //   • Normal JSON (default): one response when the audit is finished.
@@ -35,7 +37,10 @@ const RUN_COUNTS = [1, 3, 5];
 router.post('/audit', verifyToken, async (req, res) => {
     const { url } = req.body;
     const formFactor = req.body.formFactor || 'mobile';
-    const runs = parseInt(req.body.runs, 10) || 1;
+    // Default to a single run. A supplied value is validated below rather than
+    // coerced, so 0 or junk is rejected instead of quietly becoming 1.
+    const rawRuns = req.body.runs;
+    const runs = (rawRuns === undefined || rawRuns === null || rawRuns === '') ? 1 : Number(rawRuns);
 
     console.log(`📨 Audit request from ${req.user.email} (${req.user.role}): ${url}`);
 
@@ -48,8 +53,11 @@ router.post('/audit', verifyToken, async (req, res) => {
     if (!FORM_FACTORS.includes(formFactor)) {
         return res.status(400).json({ success: false, error: `formFactor must be one of: ${FORM_FACTORS.join(', ')}` });
     }
-    if (!RUN_COUNTS.includes(runs)) {
-        return res.status(400).json({ success: false, error: `runs must be one of: ${RUN_COUNTS.join(', ')}` });
+    if (!Number.isInteger(runs) || runs < MIN_RUNS || runs > MAX_RUNS) {
+        return res.status(400).json({
+            success: false,
+            error: `runs must be a whole number between ${MIN_RUNS} and ${MAX_RUNS}`
+        });
     }
 
     // ── Live progress stream (or a silent reporter for plain JSON) ───────────

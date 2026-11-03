@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { getDashboard } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { scoreStatus } from '../utils/metrics';
+import { scoreStatus, MIN_RUNS, MAX_RUNS } from '../utils/metrics';
 import './OverviewPage.css';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -47,6 +47,9 @@ const ScorePill = ({ score }) => {
 const OverviewPage = ({ onRunAudit, onOpenUrl }) => {
     const { user } = useAuth();
     const [url, setUrl] = useState('');
+    // The same two choices the Run Audit page offers — they travel with the URL
+    const [formFactor, setFormFactor] = useState('mobile');
+    const [runs, setRuns] = useState(1);
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -71,7 +74,7 @@ const OverviewPage = ({ onRunAudit, onOpenUrl }) => {
         event.preventDefault();
         const clean = url.trim();
         if (!clean) return;
-        onRunAudit(clean);
+        onRunAudit(clean, { formFactor, runs });
     };
 
     const totals = data?.totals || {};
@@ -106,9 +109,45 @@ const OverviewPage = ({ onRunAudit, onOpenUrl }) => {
                 />
                 <button type="submit" disabled={!url.trim()}>Run Audit</button>
             </form>
+            {/* Device / Runs — the same control the Run Audit page uses, so the
+                audit can start immediately instead of being set up twice */}
+            <div className="audit-options">
+                <div className="audit-options__group" role="radiogroup" aria-label="Device">
+                    <span className="audit-options__label">Device</span>
+                    {[['mobile', 'Mobile'], ['desktop', 'Desktop']].map(([value, label]) => (
+                        <button key={value} type="button" role="radio"
+                            aria-checked={formFactor === value}
+                            className={`audit-options__chip ${formFactor === value ? 'is-active' : ''}`}
+                            onClick={() => setFormFactor(value)}>
+                            {label}
+                        </button>
+                    ))}
+                </div>
+                <div className="audit-options__group" role="group" aria-label="Number of runs">
+                    <span className="audit-options__label">Runs</span>
+                    <div className="run-counter">
+                        <button type="button" className="run-counter__btn" aria-label="One fewer run"
+                            disabled={runs <= MIN_RUNS}
+                            onClick={() => setRuns(r => Math.max(MIN_RUNS, r - 1))}>−</button>
+                        <span className="run-counter__value" aria-live="polite"
+                            title={runs > 1 ? `Median of ${runs} runs — more reliable` : 'Fastest'}>
+                            {runs}
+                        </span>
+                        <button type="button" className="run-counter__btn" aria-label="One more run"
+                            disabled={runs >= MAX_RUNS}
+                            onClick={() => setRuns(r => Math.min(MAX_RUNS, r + 1))}>+</button>
+                    </div>
+                </div>
+                <p className="audit-options__hint">
+                    {formFactor === 'mobile'
+                        ? 'Mobile: simulated slow 4G and 4× slower CPU — same as PageSpeed Insights and Chrome DevTools "Mobile".'
+                        : 'Desktop: fast connection, no CPU slowdown — same as Chrome DevTools "Desktop".'}
+                    {runs > 1 && ` Runs ${runs} times and shows the median run (Lighthouse's own method).`}
+                </p>
+            </div>
+
             <p className="overview__quick-hint">
-                You will be taken to the Run Audit page, where you can choose Mobile or Desktop
-                and 1, 3 or 5 runs.
+                Run Audit opens the Run Audit page and starts straight away with these settings.
             </p>
 
             {error && (

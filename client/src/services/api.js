@@ -93,7 +93,7 @@ export const testConnection = async () => {
 
 // ─── AUDITS ──────────────────────────────────────────────────────────────────
 
-// options: { formFactor: 'mobile' | 'desktop', runs: 1 | 3 | 5 }
+// options: { formFactor: 'mobile' | 'desktop', runs: 1–10 }
 export const runAudit = async (url, { formFactor = 'mobile', runs = 1 } = {}) => {
     let auditUrl = url.trim();
     if (!auditUrl.startsWith('http://') && !auditUrl.startsWith('https://')) {

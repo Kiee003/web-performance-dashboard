@@ -13,7 +13,7 @@ import OverviewPage from './OverviewPage';
 import Sidebar from './Sidebar';
 import ReliabilityNotice from './ReliabilityNotice';
 import ReportButtons from './ReportButtons';
-import { normalizeAudit, metricStatus, scoreStatus, describeSettings, METRIC_DEFS } from '../utils/metrics';
+import { normalizeAudit, metricStatus, scoreStatus, describeSettings, METRIC_DEFS, MIN_RUNS, MAX_RUNS } from '../utils/metrics';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -39,9 +39,12 @@ const Dashboard = () => {
 
     // Runs an audit for a URL. Used by the Run Audit form and by the home
     // dashboard's quick-start box, so there is only ever one audit flow.
-    const startAudit = async (targetUrl) => {
+    const startAudit = async (targetUrl, options = {}) => {
         const target = targetUrl.trim();
         if (!target) { setError('Please enter a URL'); return; }
+        // The dashboard hands over its own choice; this page's form uses the state
+        const device = options.formFactor || formFactor;
+        const runCount = options.runs || runs;
         setLoading(true);
         setError(null);
         setResults(null);
@@ -67,7 +70,7 @@ const Dashboard = () => {
         try {
             const data = await runAuditLive(
                 target,
-                { formFactor, runs, signal: controller.signal },
+                { formFactor: device, runs: runCount, signal: controller.signal },
                 onEvent
             );
             setResults(normalizeAudit(data));
@@ -92,11 +95,14 @@ const Dashboard = () => {
         startAudit(url);
     };
 
-    // The home dashboard: keep the URL, show the Run Audit page, start there
-    const handleQuickAudit = (targetUrl) => {
+    // The home dashboard: keep the URL and its choices, show the Run Audit page,
+    // and start there so the live console appears where the user is looking
+    const handleQuickAudit = (targetUrl, options = {}) => {
         setUrl(targetUrl);
+        if (options.formFactor) setFormFactor(options.formFactor);
+        if (options.runs) setRuns(options.runs);
         setActivePage('audit');
-        startAudit(targetUrl);
+        startAudit(targetUrl, options);
     };
 
     // Opening a past audit fills in the URL without running anything
@@ -171,17 +177,20 @@ const Dashboard = () => {
                                     </button>
                                 ))}
                             </div>
-                            <div className="audit-options__group" role="radiogroup" aria-label="Number of runs">
+                            <div className="audit-options__group" role="group" aria-label="Number of runs">
                                 <span className="audit-options__label">Runs</span>
-                                {[1, 3, 5].map(n => (
-                                    <button key={n} type="button" disabled={loading} role="radio"
-                                        aria-checked={runs === n}
-                                        className={`audit-options__chip ${runs === n ? 'is-active' : ''}`}
-                                        onClick={() => setRuns(n)}
-                                        title={n === 1 ? 'Fastest' : `Median of ${n} runs — more reliable`}>
-                                        {n}
-                                    </button>
-                                ))}
+                                <div className="run-counter">
+                                    <button type="button" className="run-counter__btn" aria-label="One fewer run"
+                                        disabled={loading || runs <= MIN_RUNS}
+                                        onClick={() => setRuns(r => Math.max(MIN_RUNS, r - 1))}>−</button>
+                                    <span className="run-counter__value" aria-live="polite"
+                                        title={runs > 1 ? `Median of ${runs} runs — more reliable` : 'Fastest'}>
+                                        {runs}
+                                    </span>
+                                    <button type="button" className="run-counter__btn" aria-label="One more run"
+                                        disabled={loading || runs >= MAX_RUNS}
+                                        onClick={() => setRuns(r => Math.min(MAX_RUNS, r + 1))}>+</button>
+                                </div>
                             </div>
                             <p className="audit-options__hint">
                                 {formFactor === 'mobile'

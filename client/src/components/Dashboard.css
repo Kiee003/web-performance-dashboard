@@ -580,3 +580,49 @@ html, body, #root {
 .report-buttons--compact button { padding: 4px 9px; font-size: 11.5px; }
 .report-buttons__error { color: #b91c1c; font-size: 12px; }
 .report-buttons__none { color: #888; font-size: 12px; font-style: italic; }
+
+/* ── Runs counter (1–10) ─────────────────────────────
+   Replaces the fixed 1 / 3 / 5 chips. Sits inside .audit-options__group, so it
+   inherits the translucent pill; the number keeps the white "active chip" look. */
+.run-counter {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.run-counter__btn {
+    width: 26px;
+    height: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.15s, opacity 0.15s;
+}
+
+.run-counter__btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.18); }
+.run-counter__btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.run-counter__btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+.run-counter__value {
+    min-width: 34px;
+    padding: 4px 0;
+    text-align: center;
+    border-radius: 999px;
+    background: #fff;
+    color: #5b4bc4;
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+@media (pointer: coarse) {
+    .run-counter__btn { width: 34px; height: 34px; }
+}

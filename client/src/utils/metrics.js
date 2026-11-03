@@ -128,3 +128,8 @@ export const RELIABILITY = {
     warning:    { label: 'Check',      color: '#b45309', bg: '#fef3c7', icon: '!' },
     unreliable: { label: 'Unreliable', color: '#b91c1c', bg: '#fee2e2', icon: '✕' },
 };
+
+// How many Lighthouse runs a user may ask for. The server enforces the same
+// range (server/routes/audit.js) — keep the two in step.
+export const MIN_RUNS = 1;
+export const MAX_RUNS = 10;

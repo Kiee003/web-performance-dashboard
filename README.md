@@ -35,7 +35,7 @@
 
 | Feature | What it does |
 |---|---|
-| **Performance audit** | Runs Lighthouse in headless Chrome and reports the performance score and all five scored metrics (FCP, LCP, TBT, CLS, Speed Index) plus server response time (TTFB) and request count. Choose **Mobile or Desktop** and **1, 3 or 5 runs** (median shown). |
+| **Performance audit** | Runs Lighthouse in headless Chrome and reports the performance score and all five scored metrics (FCP, LCP, TBT, CLS, Speed Index) plus server response time (TTFB) and request count. Choose **Mobile or Desktop** and **1–10 runs** (median shown). |
 | **Result integrity** | Values come straight from Lighthouse, unmeasurable metrics show as N/A (never 0), distorted results are flagged, and the original Lighthouse report is saved for every audit. See [Result integrity](#result-integrity). |
 | **AI analysis** | Sends the metrics, test conditions and any reliability warnings to DeepSeek (`deepseek-chat`) and shows a verdict, a plain-language summary and recommendation cards. If the AI is unavailable, a built-in rule-based analysis is used instead. |
 | **Audited websites** | Every successful audit is saved. Users can search their history and re-open past results. |
@@ -67,7 +67,7 @@ Each run uses a fresh Chrome profile (cold cache), like DevTools with "Clear sto
 
 Colours (green / orange / red) use Lighthouse's own per-metric scores, so they match the official report for both mobile and desktop.
 
-**Several runs → median.** With 3 or 5 runs, the run shown is chosen with Lighthouse's own `computeMedianRun`, and every run's score is kept.
+**Several runs → median.** With more than one run, the run shown is chosen with Lighthouse's own `computeMedianRun`, and every run's score is kept.
 
 **Reliability checks.** Each result is rated *Reliable*, *Check* or *Unreliable*:
 
@@ -309,7 +309,7 @@ All endpoints are under `/api`. Unless marked **public**, send the login token i
 
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
-| POST | `/api/audit` | any user | Run an audit. Body: `{ "url": "https://...", "formFactor": "mobile" \| "desktop", "runs": 1 \| 3 \| 5 }` (defaults: mobile, 1) |
+| POST | `/api/audit` | any user | Run an audit. Body: `{ "url": "https://...", "formFactor": "mobile" \| "desktop", "runs": 1–10 }` (defaults: mobile, 1) |
 | GET | `/api/audit/:id` | owner / assigned moderator / admin | One audit |
 | GET | `/api/audit/:id/report` | owner / assigned moderator / admin | The original Lighthouse HTML report |
 | GET | `/api/audit/:id/report.json` | owner / assigned moderator / admin | The raw Lighthouse result (download) |
@@ -317,6 +317,7 @@ All endpoints are under `/api`. Unless marked **public**, send the login token i
 | GET | `/api/history/:url` | any user | Your audit history for a URL (`?formFactor=mobile\|desktop` to filter) |
 | GET | `/api/trend/:url` | any user | Your chart data for a URL (`?formFactor=` keeps mobile and desktop apart) |
 | GET | `/api/audits/mine` | any user | All your audits |
+| GET | `/api/dashboard` | any user | Home dashboard: totals, recent audits and top websites for your account |
 | GET | `/api/audits` | moderator+ | Other users' audits (moderators see assigned users only) |
 | GET | `/api/website/:url/stats` | any user | Average, best and worst score for a URL |
 | GET | `/api/websites` | moderator+ | Every audited website |
@@ -369,7 +370,7 @@ The project is organised so each feature has a clear home. For example, adding a
 ## Known limitations
 
 - Chrome must be installed on the machine running the server.
-- Results vary between runs of the same URL depending on network conditions, website load and machine speed — use 3 or 5 runs when results matter.
+- Results vary between runs of the same URL depending on network conditions, website load and machine speed — use several runs (3 or more) when results matter.
 - Mobile results use Lighthouse's *simulated* throttling (an estimate, the same method PageSpeed Insights uses), not a real slow network.
 - Each saved audit keeps its Lighthouse report (~1 MB). Deleting an audit or user also deletes its reports.
 - SQLite and the in-memory audit queue mean the app is designed for one server process. Queued audits are lost if the server restarts.
