@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const config = require('../config');
+const database = require('../db/database');
 
 const JWT_SECRET = config.jwtSecret;
 
@@ -15,16 +16,34 @@ const verifyToken = (req, res, next) => {
 
     const token = authHeader.substring(7);
 
+    let decoded;
     try {
-        const decoded = jwt.verify(token, JWT_SECRET);
-        req.user = decoded;
-        next();
+        decoded = jwt.verify(token, JWT_SECRET);
     } catch (err) {
         if (err.name === 'TokenExpiredError') {
             return res.status(401).json({ success: false, error: 'Session expired, please log in again' });
         }
         return res.status(401).json({ success: false, error: 'Invalid token' });
     }
+
+    // A token stays valid only while its version matches the account's.
+    // Changing a password bumps the account's version, which ends every existing
+    // session at once — including any token that leaked. Tokens issued before
+    // this check existed carry no version; treat those as 0 so deploying this
+    // does not sign everyone out.
+    const account = decoded?.id ? database.getUserById(decoded.id) : null;
+    if (!account) {
+        return res.status(401).json({ success: false, error: 'Account no longer exists' });
+    }
+    if ((decoded.token_version ?? 0) !== (account.token_version ?? 0)) {
+        return res.status(401).json({
+            success: false,
+            error: 'Your password was changed, so this session has ended. Please sign in again.'
+        });
+    }
+
+    req.user = decoded;
+    next();
 };
 
 // Require a minimum role level — usage: requireMinRole('moderator')
@@ -68,7 +87,13 @@ const requireRole = (roles) => {
 // Sign a new token
 const signToken = (user) => {
     return jwt.sign(
-        { id: user.id, username: user.username, email: user.email, role: user.role },
+        {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            role: user.role,
+            token_version: user.token_version ?? 0,
+        },
         JWT_SECRET,
         { expiresIn: config.jwtExpiresIn }
     );

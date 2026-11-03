@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
-import { runAudit } from '../services/api';
+import React, { useState, useRef } from 'react';
+import { runAuditLive } from '../services/api';
 import AIInsights from './AIInsights';
-import LoadingIndicator from './LoadingIndicator';
+import AuditConsole from './AuditConsole';
 import AuditHistory from './AuditHistory';
 import MyAuditedWebsites from './MyAuditedWebsites';
 import UrlCrawler from './UrlCrawler';
 import ComparisonView from './ComparisonView';
 import UserAuditManager from './UserAuditManager';
 import AdminPanel from './AdminPanel';
+import ProfilePage from './ProfilePage';
 import Sidebar from './Sidebar';
 import ReliabilityNotice from './ReliabilityNotice';
 import ReportButtons from './ReportButtons';
@@ -25,6 +26,10 @@ const Dashboard = () => {
     const [loading, setLoading] = useState(false);
     const [results, setResults] = useState(null);
     const [error, setError] = useState(null);
+    // Live audit console: the lines streamed from the server while it works
+    const [auditLog, setAuditLog] = useState(null);   // { url, lines, percent, status, startedAt }
+    // Cancels our side of the live stream when the user presses Stop
+    const abortRef = useRef(null);
 
     // ── Navigation state ──────────────────────────────────────────────────────
     // 'audit' | 'mywebsites' | 'compare' | 'crawler' | 'userdata' | 'accounts'
@@ -36,18 +41,49 @@ const Dashboard = () => {
         setLoading(true);
         setError(null);
         setResults(null);
+        setAuditLog({
+            url: url.trim(), lines: [], percent: 0, status: 'running',
+            startedAt: Date.now(),      // the console clock counts from here
+        });
+
+        // Lets Stop end our side of the stream. The audit itself keeps running
+        // on the server — the queue always finishes it — so this only stops
+        // watching, which the message below says plainly.
+        const controller = new AbortController();
+        abortRef.current = controller;
+
+        // Each streamed event updates the console
+        const onEvent = (event) => setAuditLog(log => {
+            if (!log) return log;
+            if (event.type === 'progress') return { ...log, percent: event.percent };
+            if (event.type === 'log') return { ...log, lines: [...log.lines, event] };
+            return log;
+        });
+
         try {
-            const response = await runAudit(url, { formFactor, runs });
-            if (response.success) {
-                setResults(normalizeAudit(response.data));
-            } else {
-                setError(response.error || 'Audit failed');
-            }
+            const data = await runAuditLive(
+                url,
+                { formFactor, runs, signal: controller.signal },
+                onEvent
+            );
+            setResults(normalizeAudit(data));
+            setAuditLog(log => log && { ...log, percent: 100, status: 'done' });
         } catch (err) {
-            setError(err.message || 'Failed to connect to server');
+            if (err.name === 'AbortError') {
+                setError('Stopped watching this audit. It may still finish on the server — check Audited Website in a minute.');
+                setAuditLog(log => log && { ...log, status: 'stopped' });
+            } else {
+                setError(err.message || 'Failed to connect to server');
+                setAuditLog(log => log && { ...log, status: 'failed' });
+            }
         } finally {
+            abortRef.current = null;
             setLoading(false);
         }
+    };
+
+    const handleStopAudit = () => {
+        abortRef.current?.abort();
     };
 
     const PAGE_TITLES = {
@@ -56,6 +92,7 @@ const Dashboard = () => {
         crawler:    'URL Crawler',
         userdata:   'User Audit Data',
         accounts:   'Manage Accounts',
+        profile:    'My Profile',
     };
 
     return (
@@ -136,10 +173,24 @@ const Dashboard = () => {
                             </div>
                         )}
 
-                        {loading && <LoadingIndicator message={runs > 1 ? `Running Lighthouse ${runs} times — this takes a little longer...` : 'Analysing website performance...'} />}
+                        {/* Live audit console — shown while running, and after a failure so
+                            the user can see where it stopped */}
+                        {auditLog && auditLog.status !== 'done' && (
+                            <AuditConsole key={auditLog.startedAt} {...auditLog} onStop={handleStopAudit} />
+                        )}
 
                         {results && (
                             <div className="results">
+
+                                {/* The finished audit log, folded away */}
+                                {auditLog?.status === 'done' && (
+                                    <details className="audit-log-fold">
+                                        <summary>
+                                            Audit log · {Math.round((auditLog.lines[auditLog.lines.length - 1]?.t ?? 0) / 1000)}s
+                                        </summary>
+                                        <AuditConsole key={auditLog.startedAt} {...auditLog} />
+                                    </details>
+                                )}
 
                                 {/* Score banner */}
                                 {(() => {
@@ -225,6 +276,7 @@ const Dashboard = () => {
                         {activePage === 'crawler'    && <UrlCrawler />}
                         {activePage === 'userdata'   && <UserAuditManager />}
                         {activePage === 'accounts'   && <AdminPanel />}
+                        {activePage === 'profile'    && <ProfilePage />}
                     </div>
                 )}
             </main>

@@ -1,0 +1,227 @@
+/* ── My Profile ──────────────────────────────────────────────────────────────
+   Shown inside .panel-section--page, so it only styles what it owns.
+   The palette matches the rest of the dashboard (#667eea → #764ba2). */
+
+.profile {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* ── Who you are ─────────────────────────────────────────────────────────── */
+.profile__summary {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 22px 24px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.profile__avatar {
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: white;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.profile__identity { min-width: 0; }
+
+.profile__identity h3 {
+    margin: 0 0 2px;
+    font-size: 1.25rem;
+    color: #2d2b45;
+    overflow-wrap: anywhere;
+}
+
+.profile__identity p { margin: 0; }
+
+.profile__email {
+    color: #6b6883;
+    font-size: 0.92rem;
+    overflow-wrap: anywhere;
+}
+
+.profile__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px !important;
+    color: #8a87a3;
+    font-size: 0.82rem;
+}
+
+.profile__role {
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.72rem;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+
+.profile__role--admin     { background: #fee2e2; color: #b91c1c; }
+.profile__role--moderator { background: #fef3c7; color: #b45309; }
+.profile__role--normal    { background: #e0f2fe; color: #0369a1; }
+
+/* ── The two forms ───────────────────────────────────────────────────────── */
+.profile__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 20px;
+    align-items: start;
+}
+
+.profile__card {
+    background: white;
+    border-radius: 16px;
+    padding: 22px 24px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.profile__card-title {
+    margin: 0 0 4px;
+    font-size: 1.02rem;
+    color: #2d2b45;
+}
+
+.profile__card-lead {
+    margin: 0 0 16px;
+    color: #6b6883;
+    font-size: 0.88rem;
+    line-height: 1.5;
+}
+
+.profile__form {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.profile__form label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #4a4763;
+}
+
+.profile__form input[type="text"],
+.profile__form input[type="password"] {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 1px solid #d8d6e6;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    color: #2d2b45;
+    background: #fbfbfe;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.profile__form input[type="text"]:focus,
+.profile__form input[type="password"]:focus {
+    outline: none;
+    border-color: #667eea;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+}
+
+.profile__form input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.profile__hint {
+    margin: 2px 0 4px;
+    color: #8a87a3;
+    font-size: 0.78rem;
+    line-height: 1.45;
+}
+
+/* "Show passwords" reads as a label, not a bold field label */
+.profile__check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0 2px;
+    font-size: 0.82rem !important;
+    font-weight: 500 !important;
+    color: #6b6883 !important;
+    cursor: pointer;
+}
+
+.profile__check input { accent-color: #667eea; }
+
+.profile__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.profile__actions button {
+    border: none;
+    border-radius: 10px;
+    padding: 10px 18px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    transition: opacity 0.15s, transform 0.15s;
+}
+
+.profile__actions button:hover:not(:disabled) { transform: translateY(-1px); }
+
+.profile__actions button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.profile__ghost {
+    background: transparent !important;
+    color: #6b6883 !important;
+    border: 1px solid #d8d6e6 !important;
+}
+
+/* ── Feedback ────────────────────────────────────────────────────────────── */
+.profile__alert {
+    margin: 6px 0 0;
+    padding: 9px 12px;
+    border-radius: 10px;
+    font-size: 0.84rem;
+    line-height: 1.45;
+}
+
+.profile__alert--ok    { background: #dcfce7; color: #15803d; }
+.profile__alert--error { background: #fee2e2; color: #b91c1c; }
+
+/* ── Phone ───────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+    .profile { padding: 16px; gap: 16px; }
+    .profile__summary { flex-direction: column; text-align: center; padding: 20px; }
+    .profile__meta { justify-content: center; }
+    .profile__card { padding: 18px; }
+    .profile__actions button { flex: 1; }
+}
+
+@media (hover: none) {
+    .profile__actions button:hover:not(:disabled) { transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .profile__form input,
+    .profile__actions button { transition: none; }
+}

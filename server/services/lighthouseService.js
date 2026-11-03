@@ -6,6 +6,7 @@ const path = require('path');
 const config = require('../config');
 const deepseekService = require('./deepseekService');
 const chromeSession = require('./chromeSession');
+const { SILENT } = require('./auditProgress');
 
 // Where Chrome is usually installed on each operating system
 const CHROME_CANDIDATES = [
@@ -50,11 +51,14 @@ class LighthouseService {
 
     // One Lighthouse pass in a fresh Chrome (fresh profile = cold cache, the
     // same as Chrome DevTools with "Clear storage" ticked, its default).
-    async runOnce(url, formFactor) {
+    async runOnce(url, formFactor, progress = SILENT) {
         let chrome = null;
+        let stopWatching = () => {};
         try {
+            progress.log('Launching headless Chrome with a fresh profile');
             chrome = await chromeSession.launchChrome(this.chromePath);
             console.log(`   ✅ Chrome launched on port: ${chrome.port}`);
+            progress.log(`Chrome${chrome.version ? ` ${chrome.version}` : ''} started (debug port ${chrome.port})`, 'ok');
 
             const flags = {
                 port: chrome.port,
@@ -65,6 +69,7 @@ class LighthouseService {
             // DevTools "Mobile" use). Desktop = Lighthouse's own desktop preset.
             const lhConfig = formFactor === 'desktop' ? desktopConfig : undefined;
 
+            stopWatching = progress.watchLighthouse();
             const runnerResult = await lighthouse(url, flags, lhConfig);
             if (!runnerResult || !runnerResult.lhr) {
                 throw new AuditError('Lighthouse returned no result.');
@@ -72,27 +77,35 @@ class LighthouseService {
             this.chromeVersion = chrome.version || this.chromeVersion;
             return runnerResult.lhr;
         } finally {
-            if (chrome) await chrome.close();
+            stopWatching();
+            if (chrome) {
+                await chrome.close();
+                progress.log('Chrome closed, temporary profile removed', 'detail');
+            }
         }
     }
 
     /**
      * Run a full audit.
      * @param {string} url
-     * @param {{formFactor?: 'mobile'|'desktop', runs?: number}} options
+     * @param {{formFactor?: 'mobile'|'desktop', runs?: number, progress?: object}} options
+     *        progress = an AuditProgress for the live audit console (optional)
      * @returns {{ result: object, lhr: object }}  result = dashboard data,
      *          lhr = the median raw Lighthouse result (for the saved report)
      */
-    async runAudit(url, { formFactor = 'mobile', runs = 1 } = {}) {
+    async runAudit(url, { formFactor = 'mobile', runs = 1, progress = SILENT } = {}) {
         this.auditCount++;
         const label = `[Audit #${this.auditCount}]`;
         console.log(`\n🔍 ${label} ${url} — ${formFactor}, ${runs} run${runs > 1 ? 's' : ''}`);
+        progress.log(`Audit started — ${formFactor === 'desktop' ? 'Desktop' : 'Mobile'}, ${runs} run${runs > 1 ? 's' : ''}`, 'step');
 
         // ── Run Lighthouse `runs` times ──────────────────────────────────────
         const lhrs = [];
         for (let i = 1; i <= runs; i++) {
             console.log(`📊 ${label} Lighthouse run ${i}/${runs}...`);
-            const lhr = await this.runOnce(url, formFactor);
+            progress.beginRun(i);
+            progress.log(`Lighthouse run ${i} of ${runs}`, 'step');
+            const lhr = await this.runOnce(url, formFactor, progress);
 
             // A runtimeError means the page itself could not be audited
             // (DNS failure, page returned an error, etc.) — stop and report it.
@@ -104,6 +117,8 @@ class LighthouseService {
             }
             const score = lhr.categories?.performance?.score;
             console.log(`   ✔ run ${i}: score ${typeof score === 'number' ? Math.round(score * 100) : 'n/a'}`);
+            progress.runStage(1);
+            progress.log(`Run ${i} finished — performance score ${typeof score === 'number' ? Math.round(score * 100) : 'n/a'}`, 'ok');
             lhrs.push(lhr);
         }
 
@@ -112,13 +127,23 @@ class LighthouseService {
         if (lhrs.length > 1) {
             const valid = filterToValidRuns(lhrs);
             medianLhr = valid.length > 0 ? computeMedianRun(valid) : lhrs[0];
+            progress.log(`Using the median run: run ${lhrs.indexOf(medianLhr) + 1} of ${lhrs.length}`, 'ok');
         }
 
         const result = extractResult(medianLhr, lhrs, url, { chromeVersion: this.chromeVersion });
         console.log(`✅ ${label} Lighthouse complete — score ${result.scores.performance ?? 'n/a'}, reliability: ${result.reliability.level}`);
+        const rel = result.reliability || {};
+        if (rel.level === 'ok') {
+            progress.log('Reliability check passed', 'ok');
+        } else {
+            progress.log(`Reliability check: ${rel.level} — ${(rel.notes || [])[0] || 'see the notice on the results'}`, 'warn');
+        }
 
         // ── AI analysis (with timeout) ───────────────────────────────────────
         console.log(`🤖 ${label} Requesting AI analysis...`);
+        progress.ai();
+        progress.log('Requesting AI analysis from DeepSeek', 'step');
+        const aiStartedAt = Date.now();
         try {
             result.aiInsights = await Promise.race([
                 deepseekService.generateInsights(result, url),
@@ -127,6 +152,12 @@ class LighthouseService {
         } catch {
             console.log('⚠️ AI timed out — using metrics-based analysis');
             result.aiInsights = deepseekService.getIntelligentFallback(result);
+        }
+        const aiSecs = ((Date.now() - aiStartedAt) / 1000).toFixed(1);
+        if (result.aiInsights?.isRealAI) {
+            progress.log(`AI analysis received (${aiSecs}s)`, 'ok');
+        } else {
+            progress.log('AI unavailable — using the metrics-based analysis instead', 'warn');
         }
 
         console.log(`✅ ${label} Audit completed`);

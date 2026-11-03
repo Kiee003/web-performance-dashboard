@@ -39,7 +39,13 @@ router.post('/register', async (req, res) => {
                 ? 'Admin account created — you are the first user!'
                 : 'Account created successfully',
             token,
-            user: { id: user.id, username: user.username, email: user.email, role: user.role }
+            user: {
+                id: user.id,
+                username: user.username,
+                email: user.email,
+                role: user.role,
+                created_at: user.created_at,
+            }
         });
 
     } catch (error) {
@@ -75,7 +81,13 @@ router.post('/login', async (req, res) => {
         res.json({
             success: true,
             token,
-            user: { id: user.id, username: user.username, email: user.email, role: user.role }
+            user: {
+                id: user.id,
+                username: user.username,
+                email: user.email,
+                role: user.role,
+                created_at: user.created_at,
+            }
         });
 
     } catch (error) {
@@ -223,6 +235,105 @@ router.get('/stats', verifyToken, requireRole('admin'), (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ success: false, error: 'Failed to fetch statistics' });
+    }
+});
+
+// ─── MY PROFILE (any signed-in user) ─────────────────────────────────────────
+// A user may change their own username and password — nothing else. Email and
+// role are intentionally not editable here (an admin manages roles).
+
+const USERNAME_MIN = 2;
+const USERNAME_MAX = 40;
+const PASSWORD_MIN = 6;   // same rule as registration
+// Letters, numbers, spaces and . _ - only, so the name renders safely everywhere
+const USERNAME_PATTERN = /^[\p{L}\p{N} ._-]+$/u;
+
+// PUT /api/auth/profile — change my own username
+router.put('/profile', verifyToken, (req, res) => {
+    try {
+        const username = String(req.body.username ?? '').trim();
+
+        if (username.length < USERNAME_MIN || username.length > USERNAME_MAX) {
+            return res.status(400).json({
+                success: false,
+                error: `Username must be between ${USERNAME_MIN} and ${USERNAME_MAX} characters`
+            });
+        }
+        if (!USERNAME_PATTERN.test(username)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Username may only contain letters, numbers, spaces and . _ -'
+            });
+        }
+
+        const current = database.getUserById(req.user.id);
+        if (!current) {
+            return res.status(404).json({ success: false, error: 'User not found' });
+        }
+
+        if (current.username !== username) {
+            database.updateUsername(req.user.id, username);
+        }
+
+        const user = database.getUserById(req.user.id);
+
+        // The username lives inside the login token, so hand back a fresh one.
+        // Everything else about the session stays as it was.
+        res.json({
+            success: true,
+            message: current.username === username ? 'No change' : 'Username updated',
+            user,
+            token: signToken(user)
+        });
+    } catch (error) {
+        console.error('❌ Profile update error:', error.message);
+        res.status(500).json({ success: false, error: 'Failed to update your profile' });
+    }
+});
+
+// PUT /api/auth/password — change my own password (needs the current one)
+// 400 (not 401) for a wrong current password on purpose: the client treats a
+// 401 as an expired session and would log the user out mid-form.
+router.put('/password', verifyToken, async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({
+                success: false,
+                error: 'Current password and new password are required'
+            });
+        }
+        if (String(newPassword).length < PASSWORD_MIN) {
+            return res.status(400).json({
+                success: false,
+                error: `New password must be at least ${PASSWORD_MIN} characters`
+            });
+        }
+        if (String(newPassword) === String(currentPassword)) {
+            return res.status(400).json({
+                success: false,
+                error: 'New password must be different from the current one'
+            });
+        }
+
+        const account = database.getUserWithPasswordById(req.user.id);
+        if (!account) {
+            return res.status(404).json({ success: false, error: 'User not found' });
+        }
+
+        const matches = await bcrypt.compare(String(currentPassword), account.password_hash);
+        if (!matches) {
+            return res.status(400).json({ success: false, error: 'Current password is incorrect' });
+        }
+
+        database.updatePasswordHash(req.user.id, await bcrypt.hash(String(newPassword), 12));
+
+        console.log(`🔐 ${account.email} changed their password`);
+        res.json({ success: true, message: 'Password updated' });
+    } catch (error) {
+        console.error('❌ Password change error:', error.message);
+        res.status(500).json({ success: false, error: 'Failed to change your password' });
     }
 });
 

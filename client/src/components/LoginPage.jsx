@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
+import React, { useState, useEffect } from 'react';
+import { useAuth, LOGIN_NOTICE_KEY } from '../context/AuthContext';
 import { PantauLogo, BRAND } from './Logo';
 import './LoginPage.css';
 
@@ -10,6 +10,17 @@ const LoginPage = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [notice, setNotice] = useState('');
+
+    // A one-time explanation, e.g. after a password change signed the user out
+    useEffect(() => {
+        let message = '';
+        try { message = sessionStorage.getItem(LOGIN_NOTICE_KEY) || ''; } catch { /* ignore */ }
+        if (message) {
+            setNotice(message);
+            try { sessionStorage.removeItem(LOGIN_NOTICE_KEY); } catch { /* ignore */ }
+        }
+    }, []);
 
     const handleChange = (e) => {
         setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -77,6 +88,10 @@ const LoginPage = () => {
                         Create Account
                     </button>
                 </div>
+
+                {notice && (
+                    <div className="login-notice" role="status">{notice}</div>
+                )}
 
                 {/* Form */}
                 <form onSubmit={handleSubmit} className="login-form">

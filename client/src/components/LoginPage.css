@@ -239,3 +239,19 @@
         font-size: 1.15rem;
     }
 }
+/* One-time notice carried over from a page that signed the user out
+   (for example: the password was just changed) */
+.login-notice {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 14px;
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    color: #047857;
+    padding: 10px 14px;
+    border-radius: 9px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    line-height: 1.45;
+}

@@ -45,6 +45,7 @@ function initializeDatabase() {
             email TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
             role TEXT NOT NULL DEFAULT 'normal',
+            token_version INTEGER NOT NULL DEFAULT 0,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             last_login DATETIME
         )
@@ -128,6 +129,16 @@ function initializeDatabase() {
     db.exec(`CREATE INDEX IF NOT EXISTS idx_user_id ON audits(user_id)`);
     db.exec(`CREATE INDEX IF NOT EXISTS idx_mod_assign_moderator ON moderator_assignments(moderator_id)`);
     db.exec(`CREATE INDEX IF NOT EXISTS idx_mod_assign_user ON moderator_assignments(user_id)`);
+
+    // Changing a password bumps token_version, which invalidates every token
+    // issued before the change (see middleware/auth.js). Databases created
+    // before this column existed get it here; the default of 0 keeps any
+    // session that is already open working until the next password change.
+    const userColumns = db.prepare(`PRAGMA table_info(users)`).all().map(c => c.name);
+    if (!userColumns.includes('token_version')) {
+        db.exec(`ALTER TABLE users ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0`);
+        console.log('✅ Migrated users table: added token_version');
+    }
 
     console.log('✅ Database tables and indexes ready');
 }
@@ -326,7 +337,7 @@ const getUserByEmail = (email) =>
     db.prepare(`SELECT * FROM users WHERE email = ?`).get(email);
 
 const getUserById = (id) =>
-    db.prepare(`SELECT id, username, email, role, created_at, last_login FROM users WHERE id = ?`).get(id);
+    db.prepare(`SELECT id, username, email, role, token_version, created_at, last_login FROM users WHERE id = ?`).get(id);
 
 const getAllUsers = () =>
     db.prepare(`
@@ -365,6 +376,25 @@ const deleteUser = (id) => {
 
 const updateLastLogin = (id) =>
     db.prepare(`UPDATE users SET last_login = ? WHERE id = ?`).run(new Date().toISOString(), id);
+
+// Self-service profile: a user may change only their own username and password.
+// Email and role deliberately have no update path here.
+const updateUsername = (id, username) =>
+    db.prepare(`UPDATE users SET username = ? WHERE id = ?`).run(username, id).changes > 0;
+
+// Changing the password also bumps token_version, which ends every session
+// issued with the old password — the one that made the change included.
+const updatePasswordHash = (id, passwordHash) =>
+    db.prepare(`
+        UPDATE users
+        SET password_hash = ?, token_version = token_version + 1
+        WHERE id = ?
+    `).run(passwordHash, id).changes > 0;
+
+// Includes password_hash — ONLY for checking the current password before a
+// change. This row must never be returned to the client.
+const getUserWithPasswordById = (id) =>
+    db.prepare(`SELECT * FROM users WHERE id = ?`).get(id);
 
 const getUserCount = () =>
     db.prepare(`SELECT COUNT(*) as count FROM users`).get().count;
@@ -448,6 +478,9 @@ module.exports = {
     deleteUser,
     updateLastLogin,
     getUserCount,
+    updateUsername,
+    updatePasswordHash,
+    getUserWithPasswordById,
     // Moderator assignments
     assignUserToModerator,
     unassignUserFromModerator,

@@ -10,6 +10,7 @@ const database = require('../db/database');
 const lighthouseService = require('../services/lighthouseService');
 const auditQueue = require('../services/auditQueue');
 const reportStore = require('../services/reportStore');
+const { AuditProgress, SILENT } = require('../services/auditProgress');
 const { verifyToken, requireMinRole } = require('../middleware/auth');
 const { isValidUrl } = require('../utils/url');
 const { canAccessAudit } = require('../utils/access');
@@ -21,6 +22,16 @@ const RUN_COUNTS = [1, 3, 5];
 
 // ── RUN AUDIT — all authenticated users ──────────────────────────────────────
 // Body: { url, formFactor?: 'mobile'|'desktop', runs?: 1|3|5 }
+//
+// Two response styles:
+//   • Normal JSON (default): one response when the audit is finished.
+//   • Live progress: send the header  Accept: application/x-ndjson  and the
+//     response streams one JSON object per line while the audit runs:
+//       {"type":"log","level":"step","text":"Loading page …","t":4210}
+//       {"type":"progress","percent":42}
+//       {"type":"result","data":{…}}            ← last line on success
+//       {"type":"error","status":422,"error":"…"} ← last line on failure
+//     The dashboard uses this for its terminal-style audit console.
 router.post('/audit', verifyToken, async (req, res) => {
     const { url } = req.body;
     const formFactor = req.body.formFactor || 'mobile';
@@ -41,12 +52,49 @@ router.post('/audit', verifyToken, async (req, res) => {
         return res.status(400).json({ success: false, error: `runs must be one of: ${RUN_COUNTS.join(', ')}` });
     }
 
+    // ── Live progress stream (or a silent reporter for plain JSON) ───────────
+    const streaming = (req.get('accept') || '').includes('application/x-ndjson');
+    let clientGone = false;
+    res.on('close', () => { clientGone = true; });
+
+    const send = (event) => {
+        if (!streaming || clientGone || res.writableEnded) return;
+        res.write(JSON.stringify(event) + '\n');
+    };
+    const progress = streaming ? new AuditProgress(send, { formFactor, runs }) : SILENT;
+
+    if (streaming) {
+        res.status(200);
+        res.set({
+            'Content-Type': 'application/x-ndjson; charset=utf-8',
+            'Cache-Control': 'no-cache, no-transform',
+            'X-Accel-Buffering': 'no',          // tell proxies (e.g. nginx) not to buffer
+        });
+        res.flushHeaders();
+        progress.log(`Request received: ${url}`, 'info');
+    }
+
+    // Final answer — a JSON response, or the last line of the stream
+    const finish = (status, body) => {
+        if (!streaming) return res.status(status).json(body);
+        if (body.success) send({ type: 'result', data: body.data });
+        else send({ type: 'error', status, error: body.error });
+        res.end();
+    };
+
+    // Audits run one at a time; tell the user if they have to wait
+    const { isProcessing, queueLength } = auditQueue.getStatus();
+    if (isProcessing || queueLength > 0) {
+        const ahead = queueLength + (isProcessing ? 1 : 0);
+        progress.log(`Waiting for ${ahead} other audit${ahead > 1 ? 's' : ''} to finish first…`, 'warn');
+    }
+
     // Each Lighthouse run gets its own time budget
     const timeoutMs = config.auditTimeoutMs * runs;
 
     try {
         const { result, lhr } = await Promise.race([
-            auditQueue.add(url, (auditUrl) => lighthouseService.runAudit(auditUrl, { formFactor, runs })),
+            auditQueue.add(url, (auditUrl) => lighthouseService.runAudit(auditUrl, { formFactor, runs, progress })),
             new Promise((_, reject) => setTimeout(
                 () => reject(new Error(`timeout after ${Math.round(timeoutMs / 1000)} seconds`)), timeoutMs)),
         ]);
@@ -54,6 +102,7 @@ router.post('/audit', verifyToken, async (req, res) => {
         // Save every audit Lighthouse could score — including ones flagged as
         // unreliable, so the warning stays attached to the record.
         if (result.scores.performance !== null) {
+            progress.saving();
             try {
                 result.id = database.saveAudit(result, req.user.id);
                 try {
@@ -62,28 +111,32 @@ router.post('/audit', verifyToken, async (req, res) => {
                     result.hasReport = true;
                 } catch (reportError) {
                     console.log('⚠️ Could not save Lighthouse report:', reportError.message);
+                    progress.log('Could not save the full Lighthouse report', 'warn');
                 }
+                progress.log(`Saved as audit #${result.id}`, 'ok');
             } catch (dbError) {
                 console.log('⚠️ Database save failed:', dbError.message);
+                progress.log('Could not save this audit to the history', 'warn');
             }
         }
 
-        res.json({ success: true, data: result });
+        progress.done();
+        progress.log(`Done — performance score ${result.scores.performance ?? 'n/a'}`, 'ok');
+        finish(200, { success: true, data: result });
 
     } catch (error) {
         console.error('❌ Audit failed:', error.message);
+        let status, message;
         if (error.message.includes('timeout')) {
-            return res.status(504).json({
-                success: false,
-                error: 'The audit took too long to complete. Try fewer runs, or check that the site responds.'
-            });
+            status = 504;
+            message = 'The audit took too long to complete. Try fewer runs, or check that the site responds.';
+        } else {
+            // AuditError messages are written for users; anything else is generic
+            status = error.name === 'AuditError' ? 422 : 500;
+            message = error.name === 'AuditError' ? error.message : `Audit failed: ${error.message}`;
         }
-        // AuditError messages are written for users; anything else is generic
-        const status = error.name === 'AuditError' ? 422 : 500;
-        res.status(status).json({
-            success: false,
-            error: error.name === 'AuditError' ? error.message : `Audit failed: ${error.message}`
-        });
+        progress.log(message, 'error');
+        finish(status, { success: false, error: message });
     }
 });
 

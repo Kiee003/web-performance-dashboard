@@ -61,6 +61,13 @@ const Icon = ({ name, size = 18 }) => {
                 <path d="M15.54 8.46a5 5 0 0 1 0 7.07M8.46 8.46a5 5 0 0 0 0 7.07"/>
             </svg>
         ),
+        profile: (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="9"/>
+                <circle cx="12" cy="10" r="3"/>
+                <path d="M6.2 18.2a6.2 6.2 0 0 1 11.6 0"/>
+            </svg>
+        ),
         logout: (
             <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -122,6 +129,7 @@ const NAV_ITEMS = [
     { id: 'crawler',    icon: 'crawler',  label: 'URL Crawler',         minRole: 'normal' },
     { id: 'userdata',   icon: 'userdata', label: 'User Audit Data',     minRole: 'moderator' },
     { id: 'accounts',   icon: 'accounts', label: 'Manage Accounts',     minRole: 'admin' },
+    { id: 'profile',    icon: 'profile',  label: 'My Profile',          minRole: 'normal' },
 ];
 
 // ── Screen size ───────────────────────────────────────────────────────────────

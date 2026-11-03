@@ -7,6 +7,9 @@ import { loginUser, registerUser, getCurrentUser, TOKEN_KEY } from '../services/
 
 const AuthContext = createContext(null);
 
+// One-time message handed to the login page (for example "password changed")
+export const LOGIN_NOTICE_KEY = 'pantau_login_notice';
+
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [token, setToken] = useState(localStorage.getItem(TOKEN_KEY));
@@ -19,8 +22,13 @@ export const AuthProvider = ({ children }) => {
         setUser(newUser);
     };
 
-    const logout = () => {
+    // `reason` is shown once on the login page. Used after a password change,
+    // which ends the session on purpose.
+    const logout = (reason = '') => {
         localStorage.removeItem(TOKEN_KEY);
+        if (reason) {
+            try { sessionStorage.setItem(LOGIN_NOTICE_KEY, reason); } catch { /* ignore */ }
+        }
         setToken(null);
         setUser(null);
     };
@@ -50,6 +58,10 @@ export const AuthProvider = ({ children }) => {
         verifyStoredToken();
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+    // Refresh the stored session after the user edits their own profile — the
+    // username is inside the token, so the server re-signs it.
+    const updateSession = (newToken, newUser) => saveSession(newToken, newUser);
+
     const login = async (email, password) => {
         const data = await loginUser(email, password);
         if (data.success) saveSession(data.token, data.user);
@@ -78,7 +90,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, token, loading, login, register, logout, isAdmin, isModerator, isNormal, can }}>
+        <AuthContext.Provider value={{ user, token, loading, login, register, logout, updateSession, isAdmin, isModerator, isNormal, can }}>
             {children}
         </AuthContext.Provider>
     );

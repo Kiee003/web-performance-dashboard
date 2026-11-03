@@ -57,6 +57,27 @@ export const getCurrentUser = async () => {
     return response.data;
 };
 
+// ─── MY PROFILE ──────────────────────────────────────────────────────────────
+// Only these two things can be changed by a user about themselves.
+
+export const updateUsername = async (username) => {
+    try {
+        const response = await API.put('/api/auth/profile', { username });
+        return response.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.error || 'Could not update your username');
+    }
+};
+
+export const changePassword = async (currentPassword, newPassword) => {
+    try {
+        const response = await API.put('/api/auth/password', { currentPassword, newPassword });
+        return response.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.error || 'Could not change your password');
+    }
+};
+
 // ─── SYSTEM ──────────────────────────────────────────────────────────────────
 
 export const testConnection = async () => {
@@ -94,6 +115,82 @@ export const runAudit = async (url, { formFactor = 'mobile', runs = 1 } = {}) =>
         // Prefer the server's explanation (e.g. "Lighthouse could not audit this page: ...")
         throw new Error(error.response?.data?.error || error.message);
     }
+};
+
+/**
+ * Run an audit and receive live progress while it runs (for the audit console).
+ * Uses fetch() rather than axios because axios can't read a response bit by bit.
+ *
+ * @param {string} url
+ * @param {{formFactor?: string, runs?: number, signal?: AbortSignal}} options
+ * @param {(event: object) => void} onEvent  called for every 'log' and 'progress' line
+ * @returns {Promise<object>} the audit result (same as runAudit().data)
+ */
+export const runAuditLive = async (url, { formFactor = 'mobile', runs = 1, signal } = {}, onEvent = () => {}) => {
+    let auditUrl = url.trim();
+    if (!auditUrl.startsWith('http://') && !auditUrl.startsWith('https://')) {
+        auditUrl = 'https://' + auditUrl;
+    }
+
+    const token = localStorage.getItem(TOKEN_KEY);
+    let response;
+    try {
+        response = await fetch('/api/audit', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/x-ndjson',
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify({ url: auditUrl, formFactor, runs }),
+            signal,
+        });
+    } catch (err) {
+        if (err.name === 'AbortError') throw err;
+        throw new Error('Could not reach the server. Check that it is running.');
+    }
+
+    // Errors before the audit starts (bad URL, expired login…) come back as plain JSON
+    if (response.status === 401) {
+        localStorage.removeItem(TOKEN_KEY);
+        window.location.reload();
+        throw new Error('Your session has expired. Please sign in again.');
+    }
+    if (!response.ok || !response.body) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error || `Audit failed (HTTP ${response.status})`);
+    }
+
+    // Read the stream line by line: each line is one JSON event
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let final = null;
+
+    const handleLine = (line) => {
+        if (!line.trim()) return;
+        let event;
+        try { event = JSON.parse(line); } catch { return; }
+        if (event.type === 'result' || event.type === 'error') final = event;
+        else onEvent(event);
+    };
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();            // keep any half-received line
+        lines.forEach(handleLine);
+    }
+    handleLine(buffer);
+
+    if (!final) {
+        // The connection closed without a result — usually the server restarted or stopped
+        throw new Error('The connection to the server was lost before the audit finished. Please try again.');
+    }
+    if (final.type === 'error') throw new Error(final.error || 'Audit failed');
+    return final.data;
 };
 
 // formFactor keeps mobile and desktop results apart (they are not comparable)

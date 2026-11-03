@@ -295,6 +295,8 @@ All endpoints are under `/api`. Unless marked **public**, send the login token i
 | POST | `/api/auth/register` | public | Create an account (the first account becomes admin) |
 | POST | `/api/auth/login` | public | Log in and receive a token |
 | GET | `/api/auth/me` | any user | Current user's profile |
+| PUT | `/api/auth/profile` | any user | Change your own username (returns a fresh login token) |
+| PUT | `/api/auth/password` | any user | Change your own password. Ends every session, including the current one — sign in again afterwards |
 | GET | `/api/auth/users` | moderator+ | List all accounts |
 | PUT | `/api/auth/users/:id/role` | admin | Change a user's role |
 | DELETE | `/api/auth/users/:id` | admin | Delete a user and their audits |
