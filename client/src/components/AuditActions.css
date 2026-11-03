@@ -1,0 +1,160 @@
+/* ── Audit table row actions, shared by Audited Website and User Audit Data ──
+   The tables themselves are styled by UserAuditManager.css (uam__*); this file
+   holds only the copy-only URL cell and the 3-dot menu. */
+
+/* ── URL cell: click to copy, no navigation ──────────────────────────────── */
+.uam__url-copy {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    padding: 3px 8px;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    background: none;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.82rem;
+    color: #667eea;
+    text-align: left;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.uam__url-copy:hover {
+    background: #f3f1ff;
+    border-color: #dcd7ff;
+    color: #5a4fcf;
+}
+
+.uam__url-copy:focus-visible {
+    outline: 2px solid #667eea;
+    outline-offset: 1px;
+}
+
+.uam__url-icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    color: #8b7ff0;
+}
+
+.uam__url-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* The "Copied!" confirmation */
+.uam__url-copy.is-copied {
+    color: #15803d;
+    background: #dcfce7;
+    border-color: #86efac;
+    font-weight: 600;
+}
+
+.uam__url-copy.is-copied .uam__url-icon { color: #15803d; }
+
+/* ── 3-dot button ────────────────────────────────────────────────────────── */
+.uam__kebab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid #e3e0f0;
+    border-radius: 8px;
+    background: white;
+    color: #6b6883;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.uam__kebab:hover,
+.uam__kebab.is-open {
+    background: #f3f1ff;
+    border-color: #c4b5fd;
+    color: #5a4fcf;
+}
+
+.uam__kebab:focus-visible {
+    outline: 2px solid #667eea;
+    outline-offset: 2px;
+}
+
+/* ── The menu (portalled to <body>, fixed position) ──────────────────────── */
+.uam-menu {
+    position: fixed;
+    z-index: 1000;
+    min-width: 178px;
+    padding: 6px;
+    background: white;
+    border: 1px solid #e6e3f2;
+    border-radius: 12px;
+    box-shadow: 0 14px 40px rgba(20, 10, 60, 0.22);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.uam__menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 9px 10px;
+    border: none;
+    border-radius: 8px;
+    background: none;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #2d2b45;
+    text-align: left;
+    white-space: nowrap;
+    transition: background 0.13s, color 0.13s;
+}
+
+.uam__menu-item:hover:not(:disabled) {
+    background: #f3f1ff;
+    color: #4c3fbf;
+}
+
+.uam__menu-item:focus-visible {
+    outline: 2px solid #667eea;
+    outline-offset: -2px;
+}
+
+.uam__menu-item:disabled {
+    color: #b3b0c4;
+    cursor: not-allowed;
+}
+
+.uam__menu-icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    color: #8b7ff0;
+}
+
+.uam__menu-item:disabled .uam__menu-icon { color: #c9c6d8; }
+
+.uam__menu-item--danger { color: #b91c1c; }
+.uam__menu-item--danger .uam__menu-icon { color: #dc2626; }
+.uam__menu-item--danger:hover:not(:disabled) { background: #fee2e2; color: #991b1b; }
+
+.uam-menu__divider {
+    height: 1px;
+    margin: 5px 6px;
+    background: #efedf7;
+}
+
+/* ── Phone: comfortable tap targets ──────────────────────────────────────── */
+@media (max-width: 900px) {
+    .uam__kebab { width: 36px; height: 36px; }
+    .uam__url-copy { font-size: 0.92rem; }
+    .uam__menu-item { padding: 11px 12px; font-size: 0.9rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .uam__url-copy,
+    .uam__kebab,
+    .uam__menu-item { transition: none; }
+}

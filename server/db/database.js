@@ -307,8 +307,40 @@ const getAllWebsites = () => db.prepare(`
     FROM websites ORDER BY last_audit DESC
 `).all();
 
+// Rebuild one websites row from the audits that are left for that URL. The
+// sites list and the statistics page read this table, so it has to follow a
+// delete rather than keep counting rows that are gone.
+const refreshWebsiteStats = (url) => {
+    const rows = db.prepare(
+        `SELECT performance_score, created_at FROM audits WHERE url = ? ORDER BY created_at ASC`
+    ).all(url);
+
+    if (rows.length === 0) {
+        db.prepare(`DELETE FROM websites WHERE url = ?`).run(url);
+        return;
+    }
+
+    const scores = rows.map(r => r.performance_score).filter(s => typeof s === 'number');
+
+    db.prepare(`
+        UPDATE websites
+        SET first_audit = ?, last_audit = ?, avg_score = ?, best_score = ?, worst_score = ?, audit_count = ?
+        WHERE url = ?
+    `).run(
+        rows[0].created_at,
+        rows[rows.length - 1].created_at,
+        scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : null,
+        scores.length ? Math.max(...scores) : null,
+        scores.length ? Math.min(...scores) : null,
+        rows.length,
+        url
+    );
+};
+
 const deleteAudit = (id) => {
+    const row = db.prepare(`SELECT url FROM audits WHERE id = ?`).get(id);
     const info = db.prepare(`DELETE FROM audits WHERE id = ?`).run(id);
+    if (info.changes > 0 && row) refreshWebsiteStats(row.url);
     return info.changes > 0;
 };
 
@@ -366,11 +398,16 @@ const updateUserRole = (id, role) => {
 };
 
 const deleteUser = (id) => {
+    // Note the URLs first — their totals need rebuilding after the rows go
+    const urls = db.prepare(`SELECT DISTINCT url FROM audits WHERE user_id = ?`).all(id).map(r => r.url);
+
     // Delete all audits belonging to this user
     db.prepare(`DELETE FROM audits WHERE user_id = ?`).run(id);
     // Clean up any assignments involving this user, either side
     db.prepare(`DELETE FROM moderator_assignments WHERE moderator_id = ? OR user_id = ?`).run(id, id);
     const info = db.prepare(`DELETE FROM users WHERE id = ?`).run(id);
+
+    urls.forEach(refreshWebsiteStats);
     return info.changes > 0;
 };
 

@@ -1,0 +1,129 @@
+/* ── Saved-audit popup ───────────────────────────────────────────────────────
+   The dialog keeps the Run Audit page's gradient so the white result cards sit
+   on it exactly as they do there; the cards themselves come from Dashboard.css. */
+
+.audit-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(20, 10, 60, 0.55);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    animation: audit-modal-fade 0.16s ease-out;
+}
+
+.audit-modal__dialog {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 980px;
+    max-height: calc(100vh - 48px);
+    border-radius: 18px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    box-shadow: 0 28px 70px rgba(10, 5, 40, 0.45);
+    animation: audit-modal-in 0.18s ease-out;
+}
+
+@keyframes audit-modal-fade { from { opacity: 0; } }
+@keyframes audit-modal-in {
+    from { opacity: 0; transform: translateY(8px) scale(0.99); }
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+.audit-modal__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 22px 14px;
+    color: white;
+    flex-shrink: 0;
+}
+
+.audit-modal__heading { min-width: 0; }
+
+.audit-modal__head h2 {
+    margin: 0 0 2px;
+    font-size: 1.15rem;
+    font-weight: 700;
+}
+
+.audit-modal__url {
+    margin: 0;
+    font-size: 0.84rem;
+    color: rgba(255, 255, 255, 0.85);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.audit-modal__close {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: none;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.16);
+    color: white;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.audit-modal__close:hover { background: rgba(255, 255, 255, 0.3); }
+
+.audit-modal__close:focus-visible {
+    outline: 2px solid white;
+    outline-offset: 2px;
+}
+
+/* ── Body ────────────────────────────────────────────────────────────────── */
+.audit-modal__body {
+    overflow-y: auto;
+    padding: 4px 22px 26px;
+    overscroll-behavior: contain;
+}
+
+/* The cards were built for a full page — keep them from stretching edge to
+   edge inside the dialog */
+.audit-modal__body .score-banner,
+.audit-modal__body .audit-settings { max-width: none; }
+
+.audit-modal__body .score-banner { margin-bottom: 16px; }
+
+.audit-modal__no-ai {
+    margin: 4px 0 0;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.92);
+    color: #555;
+    font-size: 0.86rem;
+}
+
+/* ── Phone ───────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+    .audit-modal { padding: 0; }
+
+    .audit-modal__dialog {
+        max-width: none;
+        max-height: 100vh;
+        height: 100%;
+        border-radius: 0;
+    }
+
+    .audit-modal__head { padding: 14px 16px 10px; }
+    .audit-modal__body { padding: 4px 14px 22px; }
+    .audit-modal__head h2 { font-size: 1.02rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .audit-modal,
+    .audit-modal__dialog { animation: none; }
+}

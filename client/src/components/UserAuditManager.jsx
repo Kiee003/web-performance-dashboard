@@ -2,21 +2,16 @@ import React, { useState, useEffect } from 'react';
 import API from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import ExportButton from './ExportButton';
-import ReportButtons from './ReportButtons';
-import ReliabilityNotice, { ReliabilityBadge } from './ReliabilityNotice';
-import { formatSeconds, formatCls, formatScore, normalizeAudit } from '../utils/metrics';
+import { ReliabilityBadge } from './ReliabilityNotice';
+import AuditDetailModal from './AuditDetailModal';
+import AuditRowMenu, { DotsIcon } from './AuditRowMenu';
+import { formatScore } from '../utils/metrics';
 import './UserAuditManager.css';
+import './AuditActions.css';
 
 // ── SVG icons ─────────────────────────────────────────────────────────────────
 const Icons = {
-    trash: (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="3 6 5 6 21 6"/>
-            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-            <path d="M10 11v6M14 11v6"/>
-            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-        </svg>
-    ),
+
     link: (
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
@@ -71,10 +66,10 @@ const UserAuditManager = () => {
     const [error, setError] = useState('');
     const [msgText, setMsgText] = useState('');
     const [msgType, setMsgType] = useState('ok');
-    const [confirmDelete, setConfirmDelete] = useState(null);
     const [search, setSearch] = useState('');
-    const [expandedAudit, setExpandedAudit] = useState(null);
-    const [copied, setCopied] = useState(false);
+    const [viewing, setViewing] = useState(null);      // audit shown in the popup
+    const [copiedId, setCopiedId] = useState(null);
+    const [menu, setMenu] = useState(null);            // { auditId, anchor, anchorEl }
 
     const showMsg = (text, type = 'ok') => {
         setMsgText(text);
@@ -97,17 +92,21 @@ const UserAuditManager = () => {
 
     useEffect(() => { fetchAudits(); }, []);
 
-    const handleDelete = async (id) => {
+    const handleDelete = async (audit) => {
+        const ok = window.confirm(
+            `Delete audit #${audit.id} for ${audit.url}?\n\nThis also removes its saved Lighthouse report. It cannot be undone.`
+        );
+        if (!ok) return;
+
         try {
-            const res = await API.delete(`/api/audit/${id}`);
+            const res = await API.delete(`/api/audit/${audit.id}`);
             if (res.data.success) {
-                setAudits(prev => prev.filter(a => a.id !== id));
+                setAudits(prev => prev.filter(a => a.id !== audit.id));
+                setViewing(current => (current && current.id === audit.id ? null : current));
                 showMsg('Audit deleted successfully', 'ok');
-                setConfirmDelete(null);
             }
         } catch (err) {
             showMsg(err.response?.data?.error || 'Delete failed', 'err');
-            setConfirmDelete(null);
         }
     };
 
@@ -117,14 +116,21 @@ const UserAuditManager = () => {
         return { color: '#dc2626', fontWeight: 700 };
     };
 
-    const handleCopyUrl = async (url) => {
+    // Clicking the URL copies it — it no longer opens anything
+    const handleCopyUrl = async (audit) => {
         try {
-            await navigator.clipboard.writeText(url);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-        } catch (err) {
-            console.error('Copy failed:', err);
+            await navigator.clipboard.writeText(audit.url);
+            setCopiedId(audit.id);
+            setTimeout(() => setCopiedId(current => (current === audit.id ? null : current)), 1800);
+        } catch {
+            showMsg('Could not copy — your browser blocked clipboard access.', 'err');
         }
+    };
+
+    const openMenu = (event, audit) => {
+        const button = event.currentTarget;
+        if (menu?.auditId === audit.id) { setMenu(null); return; }
+        setMenu({ auditId: audit.id, anchor: button.getBoundingClientRect(), anchorEl: button });
     };
 
     const formatDate = (dt) => new Date(dt).toLocaleString('en-MY', {
@@ -224,7 +230,7 @@ const UserAuditManager = () => {
                         <tbody>
                             {filtered.map(audit => (
                                 <React.Fragment key={audit.id}>
-                                    <tr className={expandedAudit === audit.id ? 'uam__row--expanded' : ''}>
+                                    <tr>
                                         <td className="uam__id">#{audit.id}</td>
                                         <td className="uam__cell-user">
                                             <div className="uam__user-cell">
@@ -232,15 +238,22 @@ const UserAuditManager = () => {
                                                 <span className="uam__uemail">{audit.email || 'Unknown'}</span>
                                             </div>
                                         </td>
+                                        {/* Copy-only URL: clicking copies, it does not open */}
                                         <td className="uam__cell-url">
                                             <button
-                                                className="uam__url-btn"
-                                                onClick={() => setExpandedAudit(prev => prev === audit.id ? null : audit.id)}
-                                                aria-expanded={expandedAudit === audit.id}
-                                                title={audit.url}
+                                                type="button"
+                                                className={`uam__url-copy ${copiedId === audit.id ? 'is-copied' : ''}`}
+                                                onClick={() => handleCopyUrl(audit)}
+                                                title={`Click to copy: ${audit.url}`}
                                             >
-                                                {audit.url?.replace(/https?:\/\//, '').substring(0, 35)}
-                                                {audit.url?.length > 40 ? '…' : ''}
+                                                <span className="uam__url-icon" aria-hidden="true">
+                                                    {copiedId === audit.id ? <CheckIcon /> : <CopyIcon />}
+                                                </span>
+                                                <span className="uam__url-text">
+                                                    {copiedId === audit.id
+                                                        ? 'Copied!'
+                                                        : audit.url?.replace(/https?:\/\//, '').substring(0, 35) + (audit.url?.length > 40 ? '…' : '')}
+                                                </span>
                                             </button>
                                         </td>
                                         <td className="uam__cell-score">
@@ -251,91 +264,45 @@ const UserAuditManager = () => {
                                         </td>
                                         <td className="uam__date">{formatDate(audit.created_at)}</td>
                                         <td className="uam__cell-actions">
-                                            <div className="uam__actions">
-                                                <ExportButton auditId={audit.id} type="single" />
-                                                {audit.has_report ? <ReportButtons auditId={audit.id} hasReport compact /> : null}
-                                                {confirmDelete === audit.id ? (
-                                                    <div className="uam__confirm">
-                                                        <button className="uam__btn uam__btn--yes" onClick={() => handleDelete(audit.id)}>Yes</button>
-                                                        <button className="uam__btn uam__btn--no"  onClick={() => setConfirmDelete(null)}>No</button>
-                                                    </div>
-                                                ) : (
-                                                    <button
-                                                        className="uam__btn uam__btn--del"
-                                                        onClick={() => setConfirmDelete(audit.id)}
-                                                        title="Delete audit"
-                                                    >
-                                                        {Icons.trash}
-                                                    </button>
-                                                )}
-                                            </div>
+                                            <button
+                                                type="button"
+                                                className={`uam__kebab ${menu?.auditId === audit.id ? 'is-open' : ''}`}
+                                                onClick={(event) => openMenu(event, audit)}
+                                                aria-haspopup="menu"
+                                                aria-expanded={menu?.auditId === audit.id}
+                                                aria-label={`Actions for ${audit.url}`}
+                                                title="Actions"
+                                            >
+                                                <DotsIcon />
+                                            </button>
                                         </td>
                                     </tr>
 
-                                    {expandedAudit === audit.id && (
-                                        <tr className="uam__detail-row">
-                                            <td colSpan={6}>
-                                                <div className="uam__detail">
-                                                    <div className="uam__detail-url">
-                                                        {audit.url && (
-                                                            <button
-                                                                onClick={() => handleCopyUrl(audit.url)}
-                                                                title="Click to copy URL"
-                                                                style={{
-                                                                    display: 'inline-flex',
-                                                                    alignItems: 'center',
-                                                                    gap: '5px',
-                                                                    fontSize: '13px',
-                                                                    fontWeight: '500',
-                                                                    color: copied ? '#28a745' : '#6c5ce7',
-                                                                    background: copied ? '#d4edda' : '#f0eeff',
-                                                                    border: `1px solid ${copied ? '#28a745' : '#c4b5fd'}`,
-                                                                    borderRadius: '6px',
-                                                                    padding: '3px 8px',
-                                                                    cursor: 'pointer',
-                                                                    wordBreak: 'break-all',
-                                                                    transition: 'all 0.2s',
-                                                                }}
-                                                            >
-                                                                {copied ? <CheckIcon /> : <CopyIcon />}
-                                                                {copied ? 'Copied!' : audit.url}
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                    <div className="uam__metrics">
-                                                        {[
-                                                            { label: 'LCP',  val: formatSeconds(audit.lcp) },
-                                                            { label: 'FCP',  val: formatSeconds(audit.fcp) },
-                                                            { label: 'TBT',  val: formatSeconds(audit.tbt) },
-                                                            { label: 'CLS',  val: formatCls(audit.cls) },
-                                                            { label: 'SI',   val: formatSeconds(audit.speed_index) },
-                                                            { label: 'TTFB', val: formatSeconds(audit.ttfb) },
-                                                            { label: 'Reqs', val: audit.requests ?? 'N/A' },
-                                                            { label: 'Device', val: audit.form_factor || 'mobile (default)' },
-                                                            { label: 'Runs', val: audit.runs || 1 },
-                                                        ].map(m => (
-                                                            <div key={m.label} className="uam__metric-chip">
-                                                                <span className="uam__metric-label">{m.label}</span>
-                                                                <span className="uam__metric-val">{m.val}</span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                    <ReliabilityNotice reliability={normalizeAudit(audit).reliability} />
-                                                    {audit.ai_summary && (
-                                                        <div className="uam__ai-summary">
-                                                            <strong>AI Summary:</strong> {audit.ai_summary.substring(0, 300)}{audit.ai_summary.length > 300 ? '…' : ''}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    )}
+
                                 </React.Fragment>
                             ))}
                         </tbody>
                     </table>
                 </div>
             )}
+
+            {menu && (() => {
+                const audit = filtered.find(a => a.id === menu.auditId);
+                return audit ? (
+                    <AuditRowMenu
+                        anchor={menu.anchor}
+                        anchorEl={menu.anchorEl}
+                        audit={audit}
+                        canDelete
+                        onView={(row) => setViewing(row)}
+                        onDelete={handleDelete}
+                        onClose={() => setMenu(null)}
+                        onError={(text) => showMsg(text, 'err')}
+                    />
+                ) : null;
+            })()}
+
+            {viewing && <AuditDetailModal audit={viewing} onClose={() => setViewing(null)} />}
         </div>
     );
 };
