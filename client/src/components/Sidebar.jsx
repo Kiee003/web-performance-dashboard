@@ -61,6 +61,12 @@ const Icon = ({ name, size = 18 }) => {
                 <path d="M15.54 8.46a5 5 0 0 1 0 7.07M8.46 8.46a5 5 0 0 0 0 7.07"/>
             </svg>
         ),
+        home: (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 10.5 12 3l9 7.5"/>
+                <path d="M5.5 9.3V21h13V9.3"/>
+            </svg>
+        ),
         profile: (
             <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="9"/>
@@ -120,17 +126,58 @@ const Icon = ({ name, size = 18 }) => {
     return icons[name] || null;
 };
 
-// Audited Website sits directly above Compare Performance — you look up a URL
-// there, copy it, then paste it into Compare.
-const NAV_ITEMS = [
-    { id: 'audit',      icon: 'audit',    label: 'Run Audit',           minRole: 'normal' },
-    { id: 'mywebsites', icon: 'globe',    label: 'Audited Website',     minRole: 'normal' },
-    { id: 'compare',    icon: 'compare',  label: 'Compare Performance', minRole: 'normal' },
-    { id: 'crawler',    icon: 'crawler',  label: 'URL Crawler',         minRole: 'normal' },
-    { id: 'userdata',   icon: 'userdata', label: 'User Audit Data',     minRole: 'moderator' },
-    { id: 'accounts',   icon: 'accounts', label: 'Manage Accounts',     minRole: 'admin' },
-    { id: 'profile',    icon: 'profile',  label: 'My Profile',          minRole: 'normal' },
+// Navigation is grouped into collapsible sections. `minRole` filters the items
+// the signed-in account may use; a section whose items are all out of reach is
+// hidden. Sections marked `soon` hold a placeholder until the feature exists.
+const SECTIONS = [
+    {
+        id: 'main',
+        items: [
+            { id: 'dashboard', icon: 'home', label: 'Dashboard', minRole: 'normal' },
+        ],
+    },
+    {
+        id: 'web',
+        title: 'Web Performance',
+        items: [
+            { id: 'audit',      icon: 'audit',    label: 'Run Audit',           minRole: 'normal' },
+            { id: 'mywebsites', icon: 'globe',    label: 'Audited Website',     minRole: 'normal' },
+            { id: 'compare',    icon: 'compare',  label: 'Compare Performance', minRole: 'normal' },
+            { id: 'crawler',    icon: 'crawler',  label: 'URL Crawler',         minRole: 'normal' },
+            { id: 'userdata',   icon: 'userdata', label: 'User Audit Data',     minRole: 'moderator' },
+        ],
+    },
+    {
+        id: 'network',
+        title: 'Network Analysis',
+        soon: 'Network analysis tools are coming soon.',
+    },
+    {
+        id: 'security',
+        title: 'Security Protection',
+        soon: 'Security protection checks are coming soon.',
+    },
+    {
+        id: 'account',
+        title: 'Account',
+        items: [
+            { id: 'accounts', icon: 'accounts', label: 'Manage Accounts', minRole: 'admin' },
+            { id: 'profile',  icon: 'profile',  label: 'My Profile',      minRole: 'normal' },
+        ],
+    },
 ];
+
+// Flat list, used for the page name in the phone top bar
+const ALL_ITEMS = SECTIONS.reduce((all, section) => all.concat(section.items || []), []);
+
+// Which sections are expanded survives a reload (unknown ids default to open)
+const SECTIONS_KEY = 'pantau_sidebar_sections';
+const readSections = () => {
+    try { return JSON.parse(localStorage.getItem(SECTIONS_KEY)) || {}; } catch { return {}; }
+};
+const saveSections = (value) => {
+    try { localStorage.setItem(SECTIONS_KEY, JSON.stringify(value)); } catch { /* ignore */ }
+};
 
 // ── Screen size ───────────────────────────────────────────────────────────────
 //   desktop  > 1024px  full sidebar, user can collapse it to an icon rail
@@ -236,6 +283,7 @@ const Sidebar = ({ activePage, onNavigate }) => {
     const [collapsed, setCollapsed] = useState(readCollapsed);   // desktop only
     const [drawerOpen, setDrawerOpen] = useState(false);         // tablet overlay / phone drawer
     const [menuOpen, setMenuOpen] = useState(false);             // profile menu
+    const [openSections, setOpenSections] = useState(readSections); // section dropdowns
     const profileRef = useRef(null);
     const menuButtonRef = useRef(null);
 
@@ -272,8 +320,14 @@ const Sidebar = ({ activePage, onNavigate }) => {
 
     const role = ROLE_CONFIG[user.role] || ROLE_CONFIG.normal;
     const userLevel = ROLE_LEVEL[user.role] || 1;
-    const visibleNav = NAV_ITEMS.filter(item => userLevel >= ROLE_LEVEL[item.minRole]);
-    const currentLabel = NAV_ITEMS.find(i => i.id === activePage)?.label || '';
+    const currentLabel = ALL_ITEMS.find(i => i.id === activePage)?.label || '';
+
+    // A section is open unless the user closed it; the first click flips it
+    const toggleSection = (id) => setOpenSections(prev => {
+        const next = { ...prev, [id]: prev[id] === false };
+        saveSections(next);
+        return next;
+    });
 
     // Compact = icons only
     const compact = (mode === 'desktop' && collapsed) || (mode === 'tablet' && !drawerOpen);
@@ -328,23 +382,53 @@ const Sidebar = ({ activePage, onNavigate }) => {
                 )}
             </div>
 
-            {/* Navigation */}
+            {/* Navigation — grouped into collapsible sections */}
             <nav className="sidebar__nav">
-                {!compact && <span className="sidebar__section-label">Tools</span>}
-                {visibleNav.map(item => (
-                    <button
-                        key={item.id}
-                        type="button"
-                        className={`sidebar__nav-item ${activePage === item.id ? 'active' : ''}`}
-                        onClick={() => navigate(item.id)}
-                        title={compact ? item.label : ''}
-                        aria-current={activePage === item.id ? 'page' : undefined}
-                    >
-                        <span className="nav-icon"><Icon name={item.icon} size={18} /></span>
-                        {!compact && <span className="nav-label">{item.label}</span>}
-                        {!compact && activePage === item.id && <span className="nav-active-dot" />}
-                    </button>
-                ))}
+                {SECTIONS.map(section => {
+                    const items = (section.items || []).filter(item => userLevel >= ROLE_LEVEL[item.minRole]);
+
+                    // Nothing this role may use, and not a placeholder section
+                    if (items.length === 0 && !section.soon) return null;
+                    // The icon rail has no room for headers or placeholders
+                    if (compact && items.length === 0) return null;
+
+                    const open = compact || openSections[section.id] !== false;
+
+                    return (
+                        <div className="sidebar__section" key={section.id}>
+                            {section.title && !compact && (
+                                <button
+                                    type="button"
+                                    className={`sidebar__section-toggle ${open ? 'is-open' : ''}`}
+                                    onClick={() => toggleSection(section.id)}
+                                    aria-expanded={open}
+                                >
+                                    <span>{section.title}</span>
+                                    <span className="sidebar__section-chevron" aria-hidden="true" />
+                                </button>
+                            )}
+
+                            {open && items.map(item => (
+                                <button
+                                    key={item.id}
+                                    type="button"
+                                    className={`sidebar__nav-item ${activePage === item.id ? 'active' : ''}`}
+                                    onClick={() => navigate(item.id)}
+                                    title={compact ? item.label : ''}
+                                    aria-current={activePage === item.id ? 'page' : undefined}
+                                >
+                                    <span className="nav-icon"><Icon name={item.icon} size={18} /></span>
+                                    {!compact && <span className="nav-label">{item.label}</span>}
+                                    {!compact && activePage === item.id && <span className="nav-active-dot" />}
+                                </button>
+                            ))}
+
+                            {open && section.soon && !compact && (
+                                <span className="sidebar__soon">{section.soon}</span>
+                            )}
+                        </div>
+                    );
+                })}
             </nav>
 
             {/* Profile — opens the account menu with Sign out */}

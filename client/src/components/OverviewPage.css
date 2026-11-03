@@ -1,0 +1,203 @@
+/* ── Home dashboard ──────────────────────────────────────────────────────────
+   Sits on the app's purple gradient, like the Run Audit page, and shares the
+   .dashboard width cap. Everything below is white cards. */
+
+.overview__quick {
+    margin-top: 4px;
+}
+
+.overview__quick-hint {
+    max-width: 700px;
+    margin: 10px auto 0;
+    text-align: center;
+    font-size: 0.82rem;
+    color: rgba(255, 255, 255, 0.72);
+}
+
+.overview__error {
+    max-width: 700px;
+    margin: 18px auto 0;
+    padding: 12px 18px;
+    border-radius: 10px;
+    background: rgba(254, 226, 226, 0.95);
+    color: #b91c1c;
+    font-size: 0.88rem;
+    font-weight: 500;
+}
+
+.overview__loading {
+    margin: 28px 0;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* ── Headline numbers ────────────────────────────────────────────────────── */
+.overview__stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 16px;
+    margin-top: 28px;
+}
+
+.overview__stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 18px 20px;
+    background: white;
+    border-radius: 14px;
+    box-shadow: 0 8px 26px rgba(20, 10, 60, 0.18);
+}
+
+.overview__stat-label {
+    font-size: 0.74rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.9px;
+    color: #8a87a3;
+}
+
+.overview__stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.15;
+    color: #2d2b45;
+    font-variant-numeric: tabular-nums;
+}
+
+.overview__stat-hint {
+    font-size: 0.76rem;
+    color: #8a87a3;
+}
+
+.overview__reliability {
+    margin-top: 14px;
+    text-align: center;
+    font-size: 0.82rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.overview__reliability strong {
+    color: white;
+}
+
+/* ── Cards ───────────────────────────────────────────────────────────────── */
+.overview__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 20px;
+    margin-top: 22px;
+}
+
+.overview__card {
+    background: white;
+    border-radius: 16px;
+    padding: 20px 22px;
+    box-shadow: 0 8px 26px rgba(20, 10, 60, 0.18);
+    min-width: 0;
+}
+
+.overview__card-title {
+    margin: 0 0 14px;
+    font-size: 1rem;
+    color: #2d2b45;
+}
+
+.overview__empty {
+    margin-top: 22px;
+    text-align: center;
+}
+
+.overview__empty h3 {
+    margin: 6px 0 6px;
+    font-size: 1.05rem;
+    color: #2d2b45;
+}
+
+.overview__empty p {
+    margin: 0;
+    color: #6b6883;
+    font-size: 0.9rem;
+}
+
+/* ── Rows ────────────────────────────────────────────────────────────────── */
+.overview__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.overview__row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 9px 8px;
+    border: none;
+    border-radius: 10px;
+    background: none;
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+    transition: background 0.15s;
+}
+
+.overview__row:hover { background: #f5f4fb; }
+
+.overview__row:focus-visible {
+    outline: 2px solid #667eea;
+    outline-offset: 1px;
+}
+
+.overview__score {
+    flex-shrink: 0;
+    width: 42px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.overview__row-main {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.overview__row-url {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #2d2b45;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.overview__row-meta {
+    font-size: 0.76rem;
+    color: #8a87a3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ── Phone ───────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+    .overview__stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 22px; }
+    .overview__stat { padding: 14px 16px; }
+    .overview__stat-value { font-size: 1.6rem; }
+    .overview__grid { grid-template-columns: 1fr; gap: 14px; }
+    .overview__card { padding: 16px; }
+    .overview__quick-hint { font-size: 0.76rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .overview__row { transition: none; }
+}

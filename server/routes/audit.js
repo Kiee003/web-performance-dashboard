@@ -332,4 +332,14 @@ router.get('/queue/status', verifyToken, requireMinRole('moderator'), (req, res)
     res.json({ success: true, data: auditQueue.getStatus() });
 });
 
+// ── HOME DASHBOARD SUMMARY — every signed-in user sees their own ────────────
+router.get('/dashboard', verifyToken, async (req, res) => {
+    try {
+        res.json({ success: true, data: database.getDashboardSummary(req.user.id) });
+    } catch (error) {
+        console.error('❌ Failed to build the dashboard summary:', error.message);
+        res.status(500).json({ success: false, error: 'Failed to load your dashboard' });
+    }
+});
+
 module.exports = router;

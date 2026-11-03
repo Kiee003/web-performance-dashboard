@@ -448,6 +448,63 @@ const getAllAssignments = () => {
     `).all();
 };
 
+// Everything the home dashboard shows, for one user, in a single request.
+const getDashboardSummary = (userId) => {
+    const totals = db.prepare(`
+        SELECT COUNT(*)               AS audits,
+               COUNT(DISTINCT url)    AS websites,
+               AVG(performance_score) AS avg_score,
+               MAX(performance_score) AS best_score,
+               MIN(performance_score) AS worst_score,
+               MAX(created_at)        AS last_audit_at
+        FROM audits WHERE user_id = ?
+    `).get(userId);
+
+    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const last7Days = db.prepare(
+        `SELECT COUNT(*) AS c FROM audits WHERE user_id = ? AND created_at >= ?`
+    ).get(userId, since).c;
+
+    const recent = db.prepare(`
+        SELECT id, url, performance_score, form_factor, reliability, created_at
+        FROM audits WHERE user_id = ?
+        ORDER BY created_at DESC LIMIT 5
+    `).all(userId);
+
+    const sites = db.prepare(`
+        SELECT url,
+               COUNT(*)               AS audits,
+               AVG(performance_score) AS avg_score,
+               MAX(performance_score) AS best_score,
+               MAX(created_at)        AS last_audit
+        FROM audits WHERE user_id = ?
+        GROUP BY url
+        ORDER BY last_audit DESC
+        LIMIT 5
+    `).all(userId);
+
+    const reliability = db.prepare(`
+        SELECT reliability, COUNT(*) AS count
+        FROM audits WHERE user_id = ? AND reliability IS NOT NULL
+        GROUP BY reliability
+    `).all(userId);
+
+    return {
+        totals: {
+            audits: totals.audits || 0,
+            websites: totals.websites || 0,
+            avgScore: totals.avg_score === null ? null : Math.round(totals.avg_score),
+            bestScore: totals.best_score,
+            worstScore: totals.worst_score,
+            lastAuditAt: totals.last_audit_at,
+            last7Days,
+        },
+        recent,
+        sites,
+        reliability,
+    };
+};
+
 const closeDatabase = () => {
     db.close();
     console.log('👋 Database connection closed');
@@ -469,6 +526,7 @@ module.exports = {
     getAllWebsites,
     deleteAudit,
     getStatistics,
+    getDashboardSummary,
     // Users
     createUser,
     getUserByEmail,

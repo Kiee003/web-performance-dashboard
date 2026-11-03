@@ -9,6 +9,7 @@ import ComparisonView from './ComparisonView';
 import UserAuditManager from './UserAuditManager';
 import AdminPanel from './AdminPanel';
 import ProfilePage from './ProfilePage';
+import OverviewPage from './OverviewPage';
 import Sidebar from './Sidebar';
 import ReliabilityNotice from './ReliabilityNotice';
 import ReportButtons from './ReportButtons';
@@ -32,17 +33,20 @@ const Dashboard = () => {
     const abortRef = useRef(null);
 
     // ── Navigation state ──────────────────────────────────────────────────────
-    // 'audit' | 'mywebsites' | 'compare' | 'crawler' | 'userdata' | 'accounts'
-    const [activePage, setActivePage] = useState('audit');
+    // 'dashboard' | 'audit' | 'mywebsites' | 'compare' | 'crawler'
+    // 'userdata' | 'accounts' | 'profile'
+    const [activePage, setActivePage] = useState('dashboard');
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (!url.trim()) { setError('Please enter a URL'); return; }
+    // Runs an audit for a URL. Used by the Run Audit form and by the home
+    // dashboard's quick-start box, so there is only ever one audit flow.
+    const startAudit = async (targetUrl) => {
+        const target = targetUrl.trim();
+        if (!target) { setError('Please enter a URL'); return; }
         setLoading(true);
         setError(null);
         setResults(null);
         setAuditLog({
-            url: url.trim(), lines: [], percent: 0, status: 'running',
+            url: target, lines: [], percent: 0, status: 'running',
             startedAt: Date.now(),      // the console clock counts from here
         });
 
@@ -62,7 +66,7 @@ const Dashboard = () => {
 
         try {
             const data = await runAuditLive(
-                url,
+                target,
                 { formFactor, runs, signal: controller.signal },
                 onEvent
             );
@@ -80,6 +84,25 @@ const Dashboard = () => {
             abortRef.current = null;
             setLoading(false);
         }
+    };
+
+    // The Run Audit page's own form
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        startAudit(url);
+    };
+
+    // The home dashboard: keep the URL, show the Run Audit page, start there
+    const handleQuickAudit = (targetUrl) => {
+        setUrl(targetUrl);
+        setActivePage('audit');
+        startAudit(targetUrl);
+    };
+
+    // Opening a past audit fills in the URL without running anything
+    const handleOpenUrl = (targetUrl) => {
+        setUrl(targetUrl);
+        setActivePage('audit');
     };
 
     const handleStopAudit = () => {
@@ -106,6 +129,10 @@ const Dashboard = () => {
                     Wrapped in .dashboard so it shares the same 1400px cap as
                     every other page instead of sprawling on wide screens.
                    ═══════════════════════════════════════════════════════════ */}
+                {activePage === 'dashboard' && (
+                    <OverviewPage onRunAudit={handleQuickAudit} onOpenUrl={handleOpenUrl} />
+                )}
+
                 {activePage === 'audit' && (
                     <div className="dashboard">
                         <div className="dashboard-header">
@@ -265,7 +292,7 @@ const Dashboard = () => {
                 {/* ═══════════════════════════════════════════════════════════
                     OTHER PAGES — each fills the content area on its own
                    ═══════════════════════════════════════════════════════════ */}
-                {activePage !== 'audit' && (
+                {activePage !== 'audit' && activePage !== 'dashboard' && (
                     <div className="panel-section panel-section--page">
                         <div className="panel-section__header">
                             <h2>{PAGE_TITLES[activePage] || ''}</h2>

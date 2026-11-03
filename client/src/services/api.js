@@ -206,6 +206,12 @@ export const getAuditHistory = async (url, limit = 20, formFactor = null) => {
     return response.data;
 };
 
+// Everything the home dashboard needs: totals, recent audits, top websites
+export const getDashboard = async () => {
+    const response = await API.get('/api/dashboard');
+    return response.data;
+};
+
 export const getAllAudits = async (limit = 50) => {
     const response = await API.get(`/api/audits?limit=${limit}`);
     return response.data;
