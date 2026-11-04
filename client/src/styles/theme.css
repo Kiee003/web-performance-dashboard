@@ -1,0 +1,760 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Pantau — design system
+   ───────────────────────────────────────────────────────────────────────────
+   Loaded last (src/index.jsx), so it overrides the per-component sheets.
+   It changes geometry as well as colour: the sidebar floats inside the page,
+   headers run left-aligned, cards and tables share one radius/shadow scale,
+   and every control uses the same button and field metrics.
+
+   Reference: soft-UI dashboards (Linear, Vercel, Stripe) — quiet surfaces,
+   one accent, generous spacing, motion only on interaction.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+    /* Surfaces */
+    --canvas:        #F4F5FA;
+    --surface:       #FFFFFF;
+    --surface-sunk:  #F7F8FC;
+    --surface-tint:  #F1F2FA;
+
+    /* Lines */
+    --line:          #E7E9F2;
+    --line-soft:     #EFF1F7;
+    --line-strong:   #D6DAE8;
+
+    /* Ink */
+    --ink:           #0F1222;
+    --ink-2:         #545B6E;
+    --ink-3:         #8A90A3;
+
+    /* Accent */
+    --accent:        #5B5BD6;
+    --accent-2:      #8B5CF6;
+    --accent-ink:    #4B4BC4;
+    --accent-soft:   #EFEEFF;
+    --accent-ring:   rgba(91, 91, 214, 0.28);
+    --accent-grad:   linear-gradient(135deg, #5B5BD6 0%, #8B5CF6 100%);
+
+    /* Status */
+    --ok: #15803D;  --ok-bg: #E7F8EE;
+    --warn: #B45309; --warn-bg: #FEF4E2;
+    --bad: #B91C1C;  --bad-bg: #FDECEC;
+
+    /* Geometry */
+    --r-xl: 22px;
+    --r-lg: 16px;
+    --r-md: 12px;
+    --r-sm: 9px;
+
+    /* Depth */
+    --shadow-sm: 0 1px 2px rgba(15, 18, 34, 0.04);
+    --shadow-md: 0 1px 2px rgba(15, 18, 34, 0.04), 0 10px 28px rgba(15, 18, 34, 0.06);
+    --shadow-lg: 0 24px 60px rgba(15, 18, 34, 0.14);
+
+    --ease: cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+/* ── Canvas ────────────────────────────────────────────────────────────── */
+html, body, #root {
+    background: var(--canvas);
+    color: var(--ink);
+}
+
+body {
+    background-image:
+        radial-gradient(880px 520px at 4% -14%, rgba(91, 91, 214, 0.10), transparent 60%),
+        radial-gradient(720px 420px at 100% -8%, rgba(139, 92, 246, 0.08), transparent 55%);
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: rgba(91, 91, 214, 0.18); }
+
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: var(--r-sm);
+}
+
+* { scrollbar-width: thin; scrollbar-color: #CED2E2 transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb {
+    background: #CED2E2; border: 3px solid transparent; border-radius: 999px; background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover { background: #B3B9CD; background-clip: content-box; }
+
+/* ═══ Shell ═══════════════════════════════════════════════════════════════ */
+
+@media (min-width: 1025px) {
+    .app-layout {
+        padding: 14px;
+        gap: 14px;
+        min-height: 100vh;
+    }
+
+    /* The rail becomes a floating panel inside the page, not an edge strip */
+    .sidebar {
+        top: 14px;
+        height: calc(100vh - 28px);
+        border-radius: var(--r-xl);
+        border-right: none;
+        box-shadow: 0 18px 46px rgba(15, 18, 34, 0.20);
+    }
+
+    .main-content {
+        padding: 8px 10px 32px 4px;
+    }
+}
+
+/* ═══ Sidebar ════════════════════════════════════════════════════════════ */
+
+.sidebar {
+    background: linear-gradient(180deg, #1B1936 0%, #121120 62%, #0F0E1B 100%);
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sidebar__brand { padding-bottom: 26px; }
+
+.sidebar__brand-name {
+    font-size: 1.2rem;
+    letter-spacing: -0.02em;
+}
+
+/* Section headings get a hairline so the groups read as groups */
+.sidebar__section-toggle {
+    color: rgba(255, 255, 255, 0.42);
+    font-size: 0.625rem;
+    letter-spacing: 0.14em;
+    padding: 10px 10px 8px;
+}
+
+.sidebar__section-toggle:hover { color: rgba(255, 255, 255, 0.80); }
+
+.sidebar__section + .sidebar__section {
+    border-top: 1px solid rgba(255, 255, 255, 0.055);
+    margin-top: 4px;
+    padding-top: 4px;
+}
+
+.sidebar__soon {
+    color: rgba(255, 255, 255, 0.32);
+    font-size: 0.69rem;
+    line-height: 1.5;
+    padding: 2px 10px 10px 14px;
+}
+
+/* Nav rows: taller, rounder, and the active one is a filled accent pill */
+.sidebar__nav-item {
+    height: 40px;
+    border-radius: var(--r-md);
+    color: rgba(255, 255, 255, 0.74);
+    font-size: 0.855rem;
+    font-weight: 500;
+    transition: background 0.16s var(--ease), color 0.16s var(--ease), transform 0.16s var(--ease);
+}
+
+.sidebar__nav-item:hover {
+    background: rgba(255, 255, 255, 0.07);
+    color: #FFFFFF;
+    transform: translateX(1px);
+}
+
+.sidebar__nav-item.active {
+    background: var(--accent-grad);
+    color: #FFFFFF;
+    font-weight: 600;
+    box-shadow: 0 8px 20px rgba(91, 91, 214, 0.34);
+}
+
+.sidebar__nav-item.active .nav-icon { color: #FFFFFF; }
+
+.sidebar__footer { padding-top: 8px; }
+
+.sidebar__profile {
+    border-radius: var(--r-md);
+    transition: background 0.15s;
+}
+
+.sidebar__profile:hover { background: rgba(255, 255, 255, 0.06); }
+
+/* ═══ Page headings ══════════════════════════════════════════════════════ */
+
+/* Left-aligned, tight, with the subtitle acting as a deck */
+.dashboard-header {
+    text-align: left;
+    margin-bottom: 22px;
+    padding: 4px 2px 0;
+}
+
+.dashboard-header h1 {
+    color: var(--ink);
+    font-size: 1.65rem;
+    font-weight: 700;
+    letter-spacing: -0.028em;
+    text-shadow: none;
+    margin-bottom: 4px;
+}
+
+.dashboard-header p {
+    color: var(--ink-3);
+    font-size: 0.9rem;
+}
+
+/* ═══ Panels & cards ═════════════════════════════════════════════════════ */
+
+.panel-section {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-xl);
+    box-shadow: var(--shadow-md);
+    overflow: visible;              /* tables scroll inside, cards may overhang */
+}
+
+.panel-section__header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--line-soft);
+    color: var(--ink);
+    padding: 18px 22px;
+    border-radius: var(--r-xl) var(--r-xl) 0 0;
+}
+
+.panel-section__header h2 {
+    color: var(--ink);
+    font-size: 1.02rem;
+    font-weight: 650;
+    letter-spacing: -0.015em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* A small accent dot marks the page title without adding markup */
+.panel-section__header h2::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 3px;
+    background: var(--accent-grad);
+    box-shadow: 0 0 0 3px rgba(91, 91, 214, 0.12);
+    flex-shrink: 0;
+}
+
+/* ═══ Home dashboard ═════════════════════════════════════════════════════ */
+
+.overview__quick { margin-top: 2px; }
+
+.overview__quick-hint {
+    color: var(--ink-3);
+    font-size: 0.78rem;
+    margin: 12px 0 0;
+    max-width: none;
+    text-align: left;
+}
+
+/* Stat cards: icon chip, label, big number, hint */
+.overview__stat {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 18px 20px 20px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    transition: transform 0.18s var(--ease), box-shadow 0.18s var(--ease);
+}
+
+.overview__stat:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+/* The coloured edge is gone; the icon carries the colour instead */
+.overview__stat::before { display: none; }
+
+.overview__stat-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    margin-bottom: 12px;
+    border-radius: 10px;
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+
+.overview__stat--cyan   .overview__stat-icon { background: #E4F6FC; color: #0E8FB8; }
+.overview__stat--amber  .overview__stat-icon { background: #FDF1DD; color: #B7791F; }
+.overview__stat--green  .overview__stat-icon { background: #E6F8EE; color: #12855A; }
+
+.overview__stat-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+}
+
+.overview__stat-value {
+    font-size: 1.95rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+}
+
+.overview__stat-hint { font-size: 0.75rem; color: var(--ink-3); }
+
+.overview__reliability {
+    display: block;
+    width: fit-content;
+    margin: 16px auto 0;
+    padding: 7px 16px;
+    border-radius: 999px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow-sm);
+    font-size: 0.79rem;
+    color: var(--ink-2);
+}
+
+.overview__reliability strong { color: var(--ink); }
+
+.overview__card,
+.metric-card,
+.score-banner,
+.audit-settings,
+.profile__card,
+.profile__summary {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow-sm);
+}
+
+/* The result summary spans the same grid as the metric cards below it */
+.score-banner {
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
+    border-radius: var(--r-lg);
+    padding: 20px 24px;
+}
+
+.audit-settings {
+    max-width: none;
+    border-radius: var(--r-md);
+}
+
+.overview__card { border-radius: var(--r-lg); padding: 20px 22px; }
+
+.overview__card-title {
+    font-size: 0.98rem;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    margin-bottom: 14px;
+}
+
+.overview__row {
+    padding: 10px 10px;
+    border-radius: var(--r-md);
+}
+
+.overview__row:hover { background: var(--surface-tint); }
+
+.overview__score {
+    border-radius: 10px;
+    font-size: 0.9rem;
+}
+
+/* ═══ URL form ═══════════════════════════════════════════════════════════ */
+
+.url-form {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 8px 8px 8px 20px;
+    box-shadow: var(--shadow-md);
+    /* Left-aligned under the page heading, and as wide as the cards below */
+    margin-left: 0;
+    margin-right: 0;
+    max-width: none;
+    transition: box-shadow 0.2s var(--ease), border-color 0.2s var(--ease);
+}
+
+.url-form:focus-within {
+    border-color: rgba(91, 91, 214, 0.42);
+    box-shadow: var(--shadow-md), 0 0 0 4px var(--accent-ring);
+}
+
+.url-form input {
+    color: var(--ink);
+    font-size: 0.98rem;
+    padding: 14px 8px;
+}
+
+.url-form input::placeholder { color: var(--ink-3); }
+
+.url-form button {
+    background: var(--accent-grad);
+    border-radius: 13px;
+    padding: 12px 26px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    box-shadow: 0 8px 20px rgba(91, 91, 214, 0.30);
+    transition: transform 0.16s var(--ease), box-shadow 0.16s var(--ease);
+}
+
+.url-form button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 26px rgba(91, 91, 214, 0.38);
+}
+
+.url-form button:active:not(:disabled) { transform: scale(0.985); }
+
+.profile__actions button:disabled,
+.url-form button:disabled {
+    background: #ECEEF6;
+    color: #A2A8BC;
+    box-shadow: none;
+    opacity: 1;
+    transform: none;
+    cursor: not-allowed;
+}
+
+/* ═══ Device / Runs segmented control ════════════════════════════════════ */
+
+.audit-options {
+    gap: 10px 14px;
+    margin: 14px 0 0;
+    max-width: none;
+    justify-content: flex-start;
+}
+
+.audit-options__group {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 4px 6px 4px 12px;
+    box-shadow: var(--shadow-sm);
+}
+
+.audit-options__label {
+    color: var(--ink-3);
+    font-size: 0.66rem;
+    letter-spacing: 0.10em;
+}
+
+.audit-options__hint { color: var(--ink-3); font-size: 0.78rem; text-align: left; }
+
+.audit-options__chip {
+    color: var(--ink-2);
+    border-radius: 10px;
+    padding: 7px 14px;
+    font-size: 0.83rem;
+    transition: background 0.14s, color 0.14s;
+}
+
+.audit-options__chip:hover:not(:disabled) { background: var(--surface-tint); color: var(--ink); }
+
+.audit-options__chip.is-active {
+    background: var(--accent-grad);
+    color: #FFFFFF;
+    box-shadow: 0 6px 14px rgba(91, 91, 214, 0.26);
+}
+
+.run-counter__btn { color: var(--ink-2); }
+.run-counter__btn:hover:not(:disabled) { background: var(--surface-tint); color: var(--ink); }
+
+.run-counter__value {
+    background: var(--accent-grad);
+    color: #FFFFFF;
+    border-radius: 9px;
+    min-width: 32px;
+    padding: 5px 0;
+    font-size: 0.85rem;
+    box-shadow: 0 6px 14px rgba(91, 91, 214, 0.24);
+}
+
+/* ═══ Buttons (shared) ═══════════════════════════════════════════════════ */
+
+/* Export chips: quiet, bordered, hover-tinted */
+.export-buttons { gap: 6px; }
+
+.export-buttons .export-buttons__json,
+.export-buttons .export-buttons__csv,
+.export-buttons .export-buttons__pdf {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    color: var(--ink-2);
+    padding: 6px 12px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    transition: background 0.14s, color 0.14s, border-color 0.14s;
+}
+
+.export-buttons .export-buttons__json:hover:not(:disabled),
+.export-buttons .export-buttons__csv:hover:not(:disabled),
+.export-buttons .export-buttons__pdf:hover:not(:disabled) {
+    background: var(--accent-soft);
+    border-color: transparent;
+    color: var(--accent-ink);
+    opacity: 1;
+}
+
+.export-buttons__label { color: var(--ink-3); }
+
+/* Report buttons inside the result card */
+.report-buttons button {
+    border-radius: 9px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink-2);
+    font-weight: 600;
+    transition: background 0.14s, color 0.14s, border-color 0.14s;
+}
+
+.report-buttons button:hover:not(:disabled) {
+    background: var(--accent-soft);
+    border-color: transparent;
+    color: var(--accent-ink);
+}
+
+/* ═══ Tables ═════════════════════════════════════════════════════════════ */
+
+.uam { color: var(--ink); }
+
+.uam__search-row {
+    gap: 10px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line-soft);
+}
+
+.uam__search {
+    background: var(--surface-sunk);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    color: var(--ink);
+    font-size: 0.85rem;
+    padding: 9px 14px;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.uam__search::placeholder { color: var(--ink-3); }
+
+.uam__search:focus {
+    outline: none;
+    background: var(--surface);
+    border-color: rgba(91, 91, 214, 0.42);
+    box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+.uam__count { color: var(--ink-3); font-size: 0.78rem; }
+
+.uam__table { font-size: 0.86rem; }
+
+.uam__table th {
+    background: transparent;
+    color: var(--ink-3);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 12px 10px;
+    border-bottom: 1px solid var(--line);
+}
+
+.uam__table td {
+    padding: 14px 10px;
+    border-bottom: 1px solid var(--line-soft);
+    vertical-align: middle;
+}
+
+.uam__table tbody tr { transition: background 0.12s; }
+.uam__table tbody tr:hover td { background: #FAFAFF; }
+.uam__table tbody tr:last-child td { border-bottom: none; }
+
+.uam__id { color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.uam__date { color: var(--ink-3); font-size: 0.78rem; }
+
+.uam__cell-score { font-variant-numeric: tabular-nums; }
+
+/* The 3-dot trigger reads as a ghost icon button */
+.uam__kebab {
+    width: 34px;
+    height: 34px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--ink-3);
+    transition: background 0.14s, color 0.14s, border-color 0.14s;
+}
+
+.uam__kebab:hover,
+.uam__kebab.is-open {
+    background: var(--surface-tint);
+    border-color: var(--line);
+    color: var(--ink);
+}
+
+.uam__url-copy {
+    color: var(--accent-ink);
+    border-radius: 8px;
+    padding: 4px 8px;
+    font-size: 0.84rem;
+}
+
+.uam__url-copy:hover { background: var(--accent-soft); border-color: transparent; }
+
+.uam-menu {
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow-lg);
+    padding: 6px;
+}
+
+.uam__menu-item {
+    border-radius: 9px;
+    font-size: 0.84rem;
+    padding: 9px 10px;
+}
+
+.uam__menu-item:hover:not(:disabled) { background: var(--surface-tint); color: var(--ink); }
+
+/* ═══ Audit detail popup ═════════════════════════════════════════════════ */
+
+.audit-modal__dialog {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-xl);
+    box-shadow: 0 30px 80px rgba(15, 18, 34, 0.28);
+}
+
+.audit-modal__head {
+    background: var(--surface);
+    border-bottom: 1px solid var(--line-soft);
+    color: var(--ink);
+    padding: 18px 22px;
+}
+
+.audit-modal__head h2 { font-size: 1.05rem; letter-spacing: -0.02em; }
+.audit-modal__url { color: var(--ink-3); font-size: 0.8rem; }
+
+.audit-modal__close {
+    background: var(--surface-sunk);
+    border: 1px solid var(--line);
+    color: var(--ink-2);
+    border-radius: 10px;
+    transition: background 0.14s, color 0.14s;
+}
+
+.audit-modal__close:hover { background: var(--accent-soft); color: var(--accent-ink); border-color: transparent; }
+
+.audit-modal__body { background: var(--canvas); padding: 18px 22px 26px; }
+
+/* ═══ Login ══════════════════════════════════════════════════════════════ */
+
+.login-page {
+    background:
+        radial-gradient(900px 520px at 8% -12%, rgba(91, 91, 214, 0.16), transparent 60%),
+        radial-gradient(760px 460px at 96% 6%, rgba(139, 92, 246, 0.14), transparent 55%),
+        var(--canvas);
+}
+
+.login-card {
+    border: 1px solid var(--line);
+    border-radius: var(--r-xl);
+    box-shadow: var(--shadow-lg);
+}
+
+.login-card input {
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: var(--surface-sunk);
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.login-card input:focus {
+    outline: none;
+    background: var(--surface);
+    border-color: rgba(91, 91, 214, 0.42);
+    box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+.login-submit {
+    background: var(--accent-grad);
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(91, 91, 214, 0.30);
+    transition: transform 0.16s var(--ease), box-shadow 0.16s var(--ease);
+}
+
+.login-submit:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 26px rgba(91, 91, 214, 0.36);
+}
+
+/* ═══ Motion ═════════════════════════════════════════════════════════════ */
+
+@keyframes pantau-rise {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: none; }
+}
+
+.dashboard,
+.panel-section {
+    animation: pantau-rise 0.3s var(--ease) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dashboard,
+    .panel-section { animation: none; }
+
+    .metric-card,
+    .overview__stat,
+    .url-form button,
+    .sidebar__nav-item { transition: none; }
+}
+
+/* ═══ Phone ══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+    .topbar {
+        background: linear-gradient(180deg, #1B1936 0%, #121120 100%);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .dashboard-header { text-align: center; }
+    .dashboard-header h1 { font-size: 1.4rem; }
+
+    /* Centred heading on phones, so the captions follow it */
+    .overview__quick-hint,
+    .audit-options__hint { text-align: center; }
+}
+
+@media (max-width: 640px) {
+    .url-form {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+        padding: 10px;
+        border-radius: 20px;
+    }
+
+    .url-form input { padding: 13px 12px; text-align: left; }
+
+    .url-form button { width: 100%; padding: 13px 20px; border-radius: 14px; }
+
+    .overview__stats { gap: 12px; }
+    .overview__stat { padding: 15px 16px 17px; }
+    .overview__stat-icon { width: 29px; height: 29px; margin-bottom: 10px; }
+    .overview__stat-value { font-size: 1.55rem; }
+
+    .panel-section__header { padding: 15px 16px; }
+    .uam__search-row { padding: 12px 14px; }
+}

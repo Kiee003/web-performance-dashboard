@@ -27,13 +27,53 @@ const formatWhen = (value) => {
     return date.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
-const Stat = ({ label, value, hint }) => (
-    <div className="overview__stat">
+const Stat = ({ label, value, hint, icon, tone }) => (
+    <div className={`overview__stat${tone ? ` overview__stat--${tone}` : ''}`}>
+        {icon && <span className="overview__stat-icon" aria-hidden="true">{icon}</span>}
         <span className="overview__stat-label">{label}</span>
         <span className="overview__stat-value">{value}</span>
         {hint && <span className="overview__stat-hint">{hint}</span>}
     </div>
 );
+
+// One line icon per headline metric — it carries the card's colour
+const StatIcon = ({ children }) => (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+        {children}
+    </svg>
+);
+
+const STAT_ICONS = {
+    audits: (
+        <StatIcon>
+            <path d="M3.5 19a9.5 9.5 0 1 1 17 0"/>
+            <line x1="12" y1="14" x2="16" y2="9.5"/>
+            <circle cx="12" cy="14" r="1.3"/>
+        </StatIcon>
+    ),
+    sites: (
+        <StatIcon>
+            <circle cx="12" cy="12" r="8.5"/>
+            <line x1="3.5" y1="12" x2="20.5" y2="12"/>
+            <path d="M12 3.5a13 13 0 0 1 3.4 8.5 13 13 0 0 1-3.4 8.5 13 13 0 0 1-3.4-8.5A13 13 0 0 1 12 3.5z"/>
+        </StatIcon>
+    ),
+    average: (
+        <StatIcon>
+            <polyline points="3 13 7 13 10 7 14 17 17 11 21 11"/>
+        </StatIcon>
+    ),
+    best: (
+        <StatIcon>
+            <path d="M8 4h8v5a4 4 0 0 1-8 0z"/>
+            <path d="M8 5H5.5a2.5 2.5 0 0 0 2.5 5.5"/>
+            <path d="M16 5h2.5a2.5 2.5 0 0 1-2.5 5.5"/>
+            <line x1="12" y1="13" x2="12" y2="17"/>
+            <line x1="9" y1="20" x2="15" y2="20"/>
+        </StatIcon>
+    ),
+};
 
 const ScorePill = ({ score }) => {
     const s = scoreStatus(score);
@@ -166,17 +206,27 @@ const OverviewPage = ({ onRunAudit, onOpenUrl }) => {
                             label="Audits run"
                             value={totals.audits || 0}
                             hint={totals.last7Days ? `+${totals.last7Days} in the last 7 days` : 'none in the last 7 days'}
+                            icon={STAT_ICONS.audits}
                         />
-                        <Stat label="Websites monitored" value={totals.websites || 0} />
+                        <Stat
+                            label="Websites monitored"
+                            value={totals.websites || 0}
+                            icon={STAT_ICONS.sites}
+                            tone="cyan"
+                        />
                         <Stat
                             label="Average score"
                             value={totals.avgScore === null || totals.avgScore === undefined ? '–' : totals.avgScore}
                             hint={totals.avgScore === null ? 'no scored audits yet' : 'across every saved audit'}
+                            icon={STAT_ICONS.average}
+                            tone="amber"
                         />
                         <Stat
                             label="Best score"
                             value={totals.bestScore === null || totals.bestScore === undefined ? '–' : totals.bestScore}
                             hint={totals.lastAuditAt ? `last audit ${formatWhen(totals.lastAuditAt)}` : undefined}
+                            icon={STAT_ICONS.best}
+                            tone="green"
                         />
                     </div>
 
