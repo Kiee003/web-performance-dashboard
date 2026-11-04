@@ -1,6 +1,6 @@
 /* ── My Profile ──────────────────────────────────────────────────────────────
    Shown inside .panel-section--page, so it only styles what it owns.
-   The palette matches the rest of the dashboard (#667eea → #764ba2). */
+   The palette matches the rest of the dashboard (#0F766E → #0B5F58). */
 
 .profile {
     max-width: 980px;
@@ -33,7 +33,7 @@
     font-size: 1.6rem;
     font-weight: 700;
     color: white;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #0F766E 0%, #0B5F58 100%);
 }
 
 .profile__identity { min-width: 0; }
@@ -41,14 +41,14 @@
 .profile__identity h3 {
     margin: 0 0 2px;
     font-size: 1.25rem;
-    color: #2d2b45;
+    color: #14201E;
     overflow-wrap: anywhere;
 }
 
 .profile__identity p { margin: 0; }
 
 .profile__email {
-    color: #6b6883;
+    color: #4B5A57;
     font-size: 0.92rem;
     overflow-wrap: anywhere;
 }
@@ -59,7 +59,7 @@
     align-items: center;
     gap: 10px;
     margin-top: 8px !important;
-    color: #8a87a3;
+    color: #7C8A86;
     font-size: 0.82rem;
 }
 
@@ -94,12 +94,12 @@
 .profile__card-title {
     margin: 0 0 4px;
     font-size: 1.02rem;
-    color: #2d2b45;
+    color: #14201E;
 }
 
 .profile__card-lead {
     margin: 0 0 16px;
-    color: #6b6883;
+    color: #4B5A57;
     font-size: 0.88rem;
     line-height: 1.5;
 }
@@ -121,10 +121,10 @@
     width: 100%;
     box-sizing: border-box;
     padding: 10px 12px;
-    border: 1px solid #d8d6e6;
+    border: 1px solid #D3CFC2;
     border-radius: 10px;
     font-size: 0.95rem;
-    color: #2d2b45;
+    color: #14201E;
     background: #fbfbfe;
     transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
 }
@@ -132,9 +132,9 @@
 .profile__form input[type="text"]:focus,
 .profile__form input[type="password"]:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: #0F766E;
     background: white;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+    box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15);
 }
 
 .profile__form input:disabled {
@@ -144,7 +144,7 @@
 
 .profile__hint {
     margin: 2px 0 4px;
-    color: #8a87a3;
+    color: #7C8A86;
     font-size: 0.78rem;
     line-height: 1.45;
 }
@@ -157,11 +157,11 @@
     margin: 4px 0 2px;
     font-size: 0.82rem !important;
     font-weight: 500 !important;
-    color: #6b6883 !important;
+    color: #4B5A57 !important;
     cursor: pointer;
 }
 
-.profile__check input { accent-color: #667eea; }
+.profile__check input { accent-color: #0F766E; }
 
 .profile__actions {
     display: flex;
@@ -178,7 +178,7 @@
     font-weight: 600;
     color: white;
     cursor: pointer;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #0F766E 0%, #0B5F58 100%);
     transition: opacity 0.15s, transform 0.15s;
 }
 
@@ -192,8 +192,8 @@
 
 .profile__ghost {
     background: transparent !important;
-    color: #6b6883 !important;
-    border: 1px solid #d8d6e6 !important;
+    color: #4B5A57 !important;
+    border: 1px solid #D3CFC2 !important;
 }
 
 /* ── Feedback ────────────────────────────────────────────────────────────── */

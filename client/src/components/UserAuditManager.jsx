@@ -112,7 +112,7 @@ const UserAuditManager = () => {
 
     const getScoreStyle = (score) => {
         if (score >= 90) return { color: '#16a34a', fontWeight: 700 };
-        if (score >= 50) return { color: '#d97706', fontWeight: 700 };
+        if (score >= 50) return { color: '#B26A00', fontWeight: 700 };
         return { color: '#dc2626', fontWeight: 700 };
     };
 

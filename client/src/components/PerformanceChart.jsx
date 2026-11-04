@@ -64,7 +64,7 @@ const PerformanceChart = ({ trendData, title = 'Performance Trend' }) => {
 
     if (!trendData || !trendData.labels || trendData.labels.length === 0) {
         return (
-            <div className="chart-container" style={{ padding: '20px', textAlign: 'center', color: '#888' }}>
+            <div className="chart-container" style={{ padding: '20px', textAlign: 'center', color: '#7C8A86' }}>
                 <p>No historical data available for trend analysis</p>
             </div>
         );
@@ -77,31 +77,31 @@ const PerformanceChart = ({ trendData, title = 'Performance Trend' }) => {
                 // Only the score is filled — filling all four turns the chart to mud
                 label: 'Performance Score',
                 data: trendData.scores,
-                backgroundColor: 'rgba(76, 175, 80, 0.12)',
+                backgroundColor: 'rgba(15, 118, 110, 0.10)',
                 fill: true,
                 yAxisID: 'y',
-                ...linePoint('#4caf50'),
+                ...linePoint('#0F766E'),
             },
             {
                 label: 'LCP (seconds)',
                 data: trendData.lcp,
                 fill: false,
                 yAxisID: 'y1',
-                ...linePoint('#ff9800'),
+                ...linePoint('#E8A33D'),
             },
             {
                 label: 'FCP (seconds)',
                 data: trendData.fcp,
                 fill: false,
                 yAxisID: 'y1',
-                ...linePoint('#2196f3'),
+                ...linePoint('#2B6CB0'),
             },
             {
                 label: 'TBT (seconds)',
                 data: trendData.tbt,
                 fill: false,
                 yAxisID: 'y1',
-                ...linePoint('#9c27b0'),
+                ...linePoint('#8B5E83'),
             },
         ]
     };
@@ -127,7 +127,7 @@ const PerformanceChart = ({ trendData, title = 'Performance Trend' }) => {
                 display: !isPhone,
                 text: title,
                 font: { size: 14, weight: 'normal' },
-                color: '#888',
+                color: '#7C8A86',
                 padding: { bottom: 12 },
             },
             tooltip: {
@@ -148,12 +148,12 @@ const PerformanceChart = ({ trendData, title = 'Performance Trend' }) => {
                 title: {
                     display: !isPhone,
                     text: 'Performance Score',
-                    color: '#4caf50',
+                    color: '#0F766E',
                 },
                 min: 0,
                 max: 100,
-                grid: { color: 'rgba(0,0,0,0.05)' },
-                ticks: { color: '#999', font: { size: 10 } },
+                grid: { color: 'rgba(20,32,30,0.06)' },
+                ticks: { color: '#7C8A86', font: { size: 10 } },
             },
             // Right — everything measured in seconds shares one axis, so LCP,
             // FCP and TBT are directly comparable
@@ -162,19 +162,19 @@ const PerformanceChart = ({ trendData, title = 'Performance Trend' }) => {
                 title: {
                     display: !isPhone,
                     text: 'Time (seconds)',
-                    color: '#ff9800',
+                    color: '#E8A33D',
                 },
                 min: 0,
                 grid: { drawOnChartArea: false },
                 ticks: {
-                    color: '#999',
+                    color: '#7C8A86',
                     font: { size: 10 },
                     callback: (v) => Number(v).toFixed(1),
                 },
             },
             x: {
                 grid: { display: false },
-                ticks: { color: '#999', font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: isPhone ? 4 : 10 },
+                ticks: { color: '#7C8A86', font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: isPhone ? 4 : 10 },
             },
         }
     };
@@ -186,4 +186,4 @@ const PerformanceChart = ({ trendData, title = 'Performance Trend' }) => {
     );
 };
 
-export default PerformanceChart;
+export default PerformanceChart;

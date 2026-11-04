@@ -17,8 +17,8 @@
     flex-shrink: 0;
 }
 
-.action-message.success { background: #d4edda; color: #155724; }
-.action-message.error   { background: #f8d7da; color: #721c24; }
+.action-message.success { background: #E3F5EC; color: #155724; }
+.action-message.error   { background: #FBE4E1; color: #721c24; }
 
 /* ── Subheader ────────────────────────────────────────── */
 .admin-subheader {
@@ -36,9 +36,9 @@
 .admin-refresh {
     display: flex;
     align-items: center;
-    background: #f0f2ff;
-    border: 1px solid #d0d5f7;
-    color: #667eea;
+    background: #E7F3F0;
+    border: 1px solid #C3DDD5;
+    color: #0F766E;
     padding: 6px 12px;
     border-radius: 8px;
     cursor: pointer;
@@ -48,7 +48,7 @@
     white-space: nowrap;
 }
 
-.admin-refresh:hover { background: #dde1ff; }
+.admin-refresh:hover { background: #CDE5DE; }
 
 /* ── Body ─────────────────────────────────────────────── */
 .admin-body {
@@ -95,7 +95,7 @@
 .users-table tr:last-child td { border-bottom: none; }
 .users-table tbody tr:hover td { background: #fafafa; }
 
-.self-row td       { background: #f8f4ff; }
+.self-row td       { background: #EDF5F2; }
 .self-row:hover td { background: #f0eaff; }
 
 /* User cell */
@@ -130,7 +130,7 @@
 
 .you-badge {
     font-size: 0.62rem;
-    background: #667eea;
+    background: #0F766E;
     color: white;
     padding: 1px 6px;
     border-radius: 10px;
@@ -149,7 +149,7 @@
     outline: none;
 }
 
-.role-select:focus { box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15); }
+.role-select:focus { box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15); }
 
 .role-tag {
     display: inline-flex;
@@ -169,9 +169,9 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    background: #f0f2ff;
-    border: 1px solid #d0d5f7;
-    color: #667eea;
+    background: #E7F3F0;
+    border: 1px solid #C3DDD5;
+    color: #0F766E;
     padding: 5px 10px;
     border-radius: 16px;
     cursor: pointer;
@@ -181,7 +181,7 @@
     white-space: nowrap;
 }
 
-.assign-toggle:hover { background: #dde1ff; }
+.assign-toggle:hover { background: #CDE5DE; }
 
 .assign-dash { color: #ccc; font-size: 0.85rem; }
 
@@ -189,13 +189,13 @@
 .assign-detail-row td { padding: 0; }
 
 .assign-detail {
-    background: #faf5ff;
-    border-top: 1px solid #e9d5ff;
+    background: #F1F7F5;
+    border-top: 1px solid #CDE5DE;
     padding: 16px 24px;
 }
 
 .assign-detail__title { font-size: 0.85rem; color: #555; margin-bottom: 12px; }
-.assign-detail__title strong { color: #667eea; }
+.assign-detail__title strong { color: #0F766E; }
 
 .assign-empty {
     font-size: 0.82rem;
@@ -224,13 +224,13 @@
 
 .assign-item:hover { border-color: #c7d2fe; }
 
-.assign-item--checked { border-color: #667eea; background: #f5f3ff; }
+.assign-item--checked { border-color: #0F766E; background: #f5f3ff; }
 .assign-item--busy { opacity: 0.6; pointer-events: none; }
 
 .assign-item input[type="checkbox"] {
     width: 16px;
     height: 16px;
-    accent-color: #667eea;
+    accent-color: #0F766E;
     cursor: pointer;
     flex-shrink: 0;
 }
@@ -240,7 +240,7 @@
     height: 28px;
     border-radius: 7px;
     background: #e0e7ff;
-    color: #667eea;
+    color: #0F766E;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -286,20 +286,20 @@
     transition: background 0.15s, color 0.15s;
 }
 
-.btn-delete:hover { background: #fff0f0; color: #dc3545; }
+.btn-delete:hover { background: #fff0f0; color: #C23B2E; }
 
 .confirm-delete {
     display: flex;
     align-items: center;
     gap: 6px;
     font-size: 0.8rem;
-    color: #dc3545;
+    color: #C23B2E;
     font-weight: 600;
     white-space: nowrap;
 }
 
 .btn-confirm-yes {
-    background: #dc3545; color: white; border: none;
+    background: #C23B2E; color: white; border: none;
     padding: 3px 10px; border-radius: 6px; cursor: pointer;
     font-size: 0.78rem; font-weight: 600;
 }
@@ -376,7 +376,7 @@
         padding: 14px 16px;
         border-bottom: 1px solid #f0f0f0;
     }
-    .users-table tr.self-row { background: #f8f4ff; }
+    .users-table tr.self-row { background: #EDF5F2; }
 
     .users-table td {
         padding: 0;

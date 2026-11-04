@@ -141,9 +141,9 @@ const Dashboard = () => {
 
                 {activePage === 'audit' && (
                     <div className="dashboard">
-                        <div className="dashboard-header">
-                            <h1>Pantau</h1>
-                            <p>Enter a URL to analyse its performance with AI-powered insights</p>
+                        <div className="dashboard-header" data-eyebrow="Web Performance · Run Audit">
+                            <h1>Run an audit</h1>
+                            <p>Enter a URL to measure its performance with Lighthouse and get AI-written recommendations.</p>
                         </div>
 
                         <form onSubmit={handleSubmit} className="url-form">
@@ -236,7 +236,7 @@ const Dashboard = () => {
                                         <div className="score-banner">
                                             <div
                                                 className="score-circle"
-                                                style={{ background: `conic-gradient(${s.color} ${(score ?? 0) * 3.6}deg, #e0e0e0 0)` }}
+                                                style={{ background: `conic-gradient(${s.color} ${(score ?? 0) * 3.6}deg, #E4E1D7 0)` }}
                                             >
                                                 <span style={{ color: s.color }}>{score ?? '–'}</span>
                                             </div>
@@ -320,4 +320,4 @@ const Dashboard = () => {
     );
 };
 
-export default Dashboard;
+export default Dashboard;

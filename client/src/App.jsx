@@ -9,17 +9,9 @@ const AppContent = () => {
 
     if (loading) {
         return (
-            <div style={{
-                minHeight: '100vh',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-            }}>
-                <div style={{ textAlign: 'center', color: 'white' }}>
-                    <PantauLogo size={64} shadow={false} />
-                    <p style={{ fontSize: '1.1rem', marginTop: '14px' }}>Loading Pantau...</p>
-                </div>
+            <div className="boot" role="status" aria-live="polite">
+                <PantauLogo size={56} shadow={false} />
+                <p className="boot__label">Loading Pantau<span className="boot__dots" aria-hidden="true" /></p>
             </div>
         );
     }
@@ -35,4 +27,4 @@ const App = () => {
     );
 };
 
-export default App;
+export default App;

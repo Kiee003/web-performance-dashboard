@@ -70,9 +70,9 @@ const AuditHistory = ({ url, formFactor = null }) => {
 
     const getScoreStyle = (score) => {
         if (score === null || score === undefined) return { color: '#888', fontWeight: 'bold' };
-        if (score >= 90) return { color: '#28a745', fontWeight: 'bold' };
+        if (score >= 90) return { color: '#0F7B4D', fontWeight: 'bold' };
         if (score >= 50) return { color: '#ffc107', fontWeight: 'bold' };
-        return { color: '#dc3545', fontWeight: 'bold' };
+        return { color: '#C23B2E', fontWeight: 'bold' };
     };
 
     if (loading && history.length === 0) {

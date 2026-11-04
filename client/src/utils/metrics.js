@@ -59,10 +59,10 @@ export const formatScore = (s) => (s === null || s === undefined ? 'N/A' : `${s}
 
 // ── Status colours ───────────────────────────────────────────────────────────
 const STATUS = {
-    good: { color: '#28a745', bg: '#d4edda', status: 'Good' },
-    mid:  { color: '#d97706', bg: '#fff3cd', status: 'Needs Improvement' },
-    poor: { color: '#dc3545', bg: '#f8d7da', status: 'Poor' },
-    none: { color: '#888',    bg: '#e9ecef', status: 'Not measured' },
+    good: { color: '#0F7B4D', bg: '#E3F5EC', status: 'Good' },
+    mid:  { color: '#B26A00', bg: '#FCEFD3', status: 'Needs Improvement' },
+    poor: { color: '#C23B2E', bg: '#FBE4E1', status: 'Poor' },
+    none: { color: '#7C8A86', bg: '#EEECE4', status: 'Not measured' },
 };
 
 // Lighthouse's own rule (same as the official report): metric score
@@ -90,9 +90,9 @@ export function metricStatus(key, value, lighthouseScore) {
 
 export function scoreStatus(score) {
     if (score === null || score === undefined) return { ...STATUS.none, status: 'No score' };
-    if (score >= 90) return { color: '#28a745', bg: '#d4edda', status: 'Good' };
-    if (score >= 50) return { color: '#d97706', bg: '#fff3cd', status: 'Needs Improvement' };
-    return { color: '#dc3545', bg: '#f8d7da', status: 'Poor' };
+    if (score >= 90) return { color: '#0F7B4D', bg: '#E3F5EC', status: 'Good' };
+    if (score >= 50) return { color: '#B26A00', bg: '#FCEFD3', status: 'Needs Improvement' };
+    return { color: '#C23B2E', bg: '#FBE4E1', status: 'Poor' };
 }
 
 // The metrics shown on audit pages, in Lighthouse report order
@@ -124,9 +124,9 @@ export function describeSettings(audit) {
 }
 
 export const RELIABILITY = {
-    ok:         { label: 'Reliable',   color: '#15803d', bg: '#dcfce7', icon: '✓' },
-    warning:    { label: 'Check',      color: '#b45309', bg: '#fef3c7', icon: '!' },
-    unreliable: { label: 'Unreliable', color: '#b91c1c', bg: '#fee2e2', icon: '✕' },
+    ok:         { label: 'Reliable',   color: '#0F7B4D', bg: '#E3F5EC', icon: '✓' },
+    warning:    { label: 'Check',      color: '#A15C07', bg: '#FCEFD3', icon: '!' },
+    unreliable: { label: 'Unreliable', color: '#B42318', bg: '#FBE4E1', icon: '✕' },
 };
 
 // How many Lighthouse runs a user may ask for. The server enforces the same

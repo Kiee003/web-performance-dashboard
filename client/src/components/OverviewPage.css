@@ -54,20 +54,20 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.9px;
-    color: #8a87a3;
+    color: #7C8A86;
 }
 
 .overview__stat-value {
     font-size: 2rem;
     font-weight: 700;
     line-height: 1.15;
-    color: #2d2b45;
+    color: #14201E;
     font-variant-numeric: tabular-nums;
 }
 
 .overview__stat-hint {
     font-size: 0.76rem;
-    color: #8a87a3;
+    color: #7C8A86;
 }
 
 .overview__reliability {
@@ -100,7 +100,7 @@
 .overview__card-title {
     margin: 0 0 14px;
     font-size: 1rem;
-    color: #2d2b45;
+    color: #14201E;
 }
 
 .overview__empty {
@@ -111,12 +111,12 @@
 .overview__empty h3 {
     margin: 6px 0 6px;
     font-size: 1.05rem;
-    color: #2d2b45;
+    color: #14201E;
 }
 
 .overview__empty p {
     margin: 0;
-    color: #6b6883;
+    color: #4B5A57;
     font-size: 0.9rem;
 }
 
@@ -148,7 +148,7 @@
 .overview__row:hover { background: #f5f4fb; }
 
 .overview__row:focus-visible {
-    outline: 2px solid #667eea;
+    outline: 2px solid #0F766E;
     outline-offset: 1px;
 }
 
@@ -174,7 +174,7 @@
 .overview__row-url {
     font-size: 0.88rem;
     font-weight: 600;
-    color: #2d2b45;
+    color: #14201E;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -182,7 +182,7 @@
 
 .overview__row-meta {
     font-size: 0.76rem;
-    color: #8a87a3;
+    color: #7C8A86;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

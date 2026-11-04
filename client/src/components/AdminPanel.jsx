@@ -49,8 +49,8 @@ const Icons = {
 };
 
 const ROLE_CONFIG = {
-    admin:     { label: 'Admin',     color: '#dc3545', bg: '#f8d7da', icon: Icons.admin     },
-    moderator: { label: 'Moderator', color: '#856404', bg: '#fff3cd', icon: Icons.moderator },
+    admin:     { label: 'Admin',     color: '#C23B2E', bg: '#FBE4E1', icon: Icons.admin     },
+    moderator: { label: 'Moderator', color: '#856404', bg: '#FCEFD3', icon: Icons.moderator },
     normal:    { label: 'User',      color: '#0c5460', bg: '#d1ecf1', icon: Icons.user      },
 };
 

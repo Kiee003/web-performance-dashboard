@@ -102,9 +102,9 @@ const ComparisonView = ({ currentAuditId, currentUrl }) => {
     };
 
     const getScoreColor = (score) => {
-        if (score >= 90) return '#28a745';
-        if (score >= 50) return '#ffc107';
-        return '#dc3545';
+        if (score >= 90) return '#0F7B4D';
+        if (score >= 50) return '#B26A00';
+        return '#C23B2E';
     };
 
     const getMetricComparison = (item1, item2, metric) => {

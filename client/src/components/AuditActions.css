@@ -15,19 +15,19 @@
     cursor: pointer;
     font: inherit;
     font-size: 0.82rem;
-    color: #667eea;
+    color: #0F766E;
     text-align: left;
     transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 
 .uam__url-copy:hover {
-    background: #f3f1ff;
+    background: #E7F3F0;
     border-color: #dcd7ff;
     color: #5a4fcf;
 }
 
 .uam__url-copy:focus-visible {
-    outline: 2px solid #667eea;
+    outline: 2px solid #0F766E;
     outline-offset: 1px;
 }
 
@@ -64,20 +64,20 @@
     border: 1px solid #e3e0f0;
     border-radius: 8px;
     background: white;
-    color: #6b6883;
+    color: #4B5A57;
     cursor: pointer;
     transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 
 .uam__kebab:hover,
 .uam__kebab.is-open {
-    background: #f3f1ff;
+    background: #E7F3F0;
     border-color: #c4b5fd;
     color: #5a4fcf;
 }
 
 .uam__kebab:focus-visible {
-    outline: 2px solid #667eea;
+    outline: 2px solid #0F766E;
     outline-offset: 2px;
 }
 
@@ -107,19 +107,19 @@
     font: inherit;
     font-size: 0.85rem;
     font-weight: 500;
-    color: #2d2b45;
+    color: #14201E;
     text-align: left;
     white-space: nowrap;
     transition: background 0.13s, color 0.13s;
 }
 
 .uam__menu-item:hover:not(:disabled) {
-    background: #f3f1ff;
+    background: #E7F3F0;
     color: #4c3fbf;
 }
 
 .uam__menu-item:focus-visible {
-    outline: 2px solid #667eea;
+    outline: 2px solid #0F766E;
     outline-offset: -2px;
 }
 

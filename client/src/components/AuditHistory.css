@@ -7,7 +7,7 @@
 }
 
 .history__state { text-align: center; padding: 20px; color: #666; }
-.history__state--error { color: #dc3545; }
+.history__state--error { color: #C23B2E; }
 
 .history__head {
     display: flex;

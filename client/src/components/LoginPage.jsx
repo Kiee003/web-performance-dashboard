@@ -60,15 +60,43 @@ const LoginPage = () => {
 
     return (
         <div className="login-page">
+
+            {/* Brand panel — hidden on phones, where the form card carries the logo */}
+            <aside className="login-aside" aria-hidden="false">
+                <div className="login-aside__brand">
+                    <PantauLogo size={40} shadow={false} />
+                    <span>{BRAND.name}</span>
+                </div>
+
+                <div className="login-aside__body">
+                    <p className="login-aside__eyebrow">Web performance, measured</p>
+                    <h2>See what slows your site down — and what to do about it.</h2>
+                    <ul className="login-aside__points">
+                        <li><b>01</b><span>Lighthouse audits on mobile or desktop, median of several runs.</span></li>
+                        <li><b>02</b><span>Plain-language fixes written by AI, ranked by impact.</span></li>
+                        <li><b>03</b><span>History and side-by-side comparison for every site you track.</span></li>
+                    </ul>
+                </div>
+
+                {/* Decorative gauge */}
+                <svg className="login-aside__gauge" viewBox="0 0 240 150" fill="none" aria-hidden="true">
+                    <path d="M20 130 A100 100 0 0 1 220 130" stroke="rgba(255,255,255,0.14)" strokeWidth="10" strokeLinecap="round" />
+                    <path d="M20 130 A100 100 0 0 1 176 49" stroke="#5EEAD4" strokeWidth="10" strokeLinecap="round" />
+                    <line x1="120" y1="130" x2="168" y2="62" stroke="#E8A33D" strokeWidth="5" strokeLinecap="round" />
+                    <circle cx="120" cy="130" r="8" fill="#fff" />
+                </svg>
+            </aside>
+
+            <main className="login-main">
             <div className="login-card">
 
                 {/* Header */}
                 <div className="login-header">
                     <div className="login-icon-wrap">
-                        <PantauLogo size={72} />
+                        <PantauLogo size={44} shadow={false} />
                     </div>
-                    <h1>{BRAND.name}</h1>
-                    <p>Analyse, optimise and monitor your website</p>
+                    <h1>{mode === 'login' ? 'Sign in to Pantau' : 'Create your account'}</h1>
+                    <p>{mode === 'login' ? 'Welcome back — pick up where you left off.' : 'Start auditing your websites in under a minute.'}</p>
                 </div>
 
                 {/* Tabs */}
@@ -193,8 +221,9 @@ const LoginPage = () => {
                     )}
                 </div>
             </div>
+            </main>
         </div>
     );
 };
 
-export default LoginPage;
+export default LoginPage;

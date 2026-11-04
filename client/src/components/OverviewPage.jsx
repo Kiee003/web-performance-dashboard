@@ -129,9 +129,9 @@ const OverviewPage = ({ onRunAudit, onOpenUrl }) => {
 
     return (
         <div className="dashboard overview">
-            <div className="dashboard-header">
+            <div className="dashboard-header" data-eyebrow="Overview">
                 <h1>Welcome back{user?.username ? `, ${user.username.split(' ')[0]}` : ''}</h1>
-                <p>Your web performance at a glance</p>
+                <p>Your web performance at a glance — start a new audit or pick up where you left off.</p>
             </div>
 
             {/* Quick start — hands off to the Run Audit page */}

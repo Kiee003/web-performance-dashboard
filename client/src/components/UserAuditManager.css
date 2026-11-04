@@ -9,8 +9,8 @@
     font-size: 0.88rem;
     font-weight: 500;
 }
-.uam__msg--ok  { background: #d4edda; color: #155724; }
-.uam__msg--err { background: #f8d7da; color: #721c24; }
+.uam__msg--ok  { background: #E3F5EC; color: #155724; }
+.uam__msg--err { background: #FBE4E1; color: #721c24; }
 
 /* Moderator scope note */
 .uam__scope-note {
@@ -18,10 +18,10 @@
     align-items: center;
     gap: 8px;
     padding: 10px 20px;
-    background: #f0f2ff;
-    color: #4c4ddc;
+    background: #E7F3F0;
+    color: #0B5F58;
     font-size: 0.82rem;
-    border-bottom: 1px solid #e0e3ff;
+    border-bottom: 1px solid #CDE5DE;
 }
 
 .uam__scope-note strong { font-weight: 700; }
@@ -47,7 +47,7 @@
     background: white;
 }
 
-.uam__search:focus { border-color: #667eea; }
+.uam__search:focus { border-color: #0F766E; }
 
 .uam__count {
     font-size: 0.78rem;
@@ -59,9 +59,9 @@
 .uam__refresh {
     display: flex;
     align-items: center;
-    background: #f0f2ff;
-    border: 1px solid #d0d5f7;
-    color: #667eea;
+    background: #E7F3F0;
+    border: 1px solid #C3DDD5;
+    color: #0F766E;
     padding: 7px 12px;
     border-radius: 8px;
     cursor: pointer;
@@ -72,7 +72,7 @@
     flex-shrink: 0;
 }
 
-.uam__refresh:hover { background: #dde1ff; }
+.uam__refresh:hover { background: #CDE5DE; }
 
 .uam__loading {
     text-align: center;
@@ -117,7 +117,7 @@
     line-height: 1.5;
 }
 
-.uam__empty-text strong { color: #667eea; }
+.uam__empty-text strong { color: #0F766E; }
 
 .uam__table-wrap { overflow-x: auto; }
 
@@ -151,7 +151,7 @@
 
 .uam__table tr:last-child td { border-bottom: none; }
 .uam__table tbody tr:hover td { background: #fafafa; }
-.uam__row--expanded td { background: #f8f4ff; }
+.uam__row--expanded td { background: #EDF5F2; }
 
 .uam__id {
     color: #aaa;
@@ -172,7 +172,7 @@
 .uam__url-btn {
     background: none;
     border: none;
-    color: #667eea;
+    color: #0F766E;
     cursor: pointer;
     font-size: 0.82rem;
     text-align: left;
@@ -187,7 +187,7 @@
     display: block;
 }
 
-.uam__url-btn:hover { color: #764ba2; }
+.uam__url-btn:hover { color: #0B5F58; }
 
 .uam__date { color: #888; font-size: 0.78rem; white-space: nowrap; }
 
@@ -219,18 +219,18 @@
     border-radius: 6px;
 }
 
-.uam__btn--del:hover { background: #fff0f0; color: #dc3545; opacity: 1; }
+.uam__btn--del:hover { background: #fff0f0; color: #C23B2E; opacity: 1; }
 
 .uam__confirm { display: flex; align-items: center; gap: 4px; }
-.uam__btn--yes { background: #dc3545; color: white; }
+.uam__btn--yes { background: #C23B2E; color: white; }
 .uam__btn--no  { background: #e9ecef; color: #555; }
 
 /* Expanded detail row */
 .uam__detail-row td { padding: 0; }
 
 .uam__detail {
-    background: #faf5ff;
-    border-top: 1px solid #e9d5ff;
+    background: #F1F7F5;
+    border-top: 1px solid #CDE5DE;
     padding: 14px 24px;
     display: flex;
     flex-direction: column;
@@ -253,7 +253,7 @@
     flex-direction: column;
     align-items: center;
     background: white;
-    border: 1px solid #e9d5ff;
+    border: 1px solid #CDE5DE;
     border-radius: 8px;
     padding: 6px 12px;
     min-width: 60px;
@@ -281,7 +281,7 @@
     background: white;
     border-radius: 8px;
     padding: 10px 14px;
-    border-left: 3px solid #667eea;
+    border-left: 3px solid #0F766E;
 }
 
 /* ── Tablet: search row wraps, actions may wrap inside their cell ─────────── */
@@ -335,7 +335,7 @@
         min-width: 0;
     }
     .uam__table tbody tr:hover td { background: none; }
-    .uam__row--expanded { background: #f8f4ff; }
+    .uam__row--expanded { background: #EDF5F2; }
 
     .uam__id           { grid-area: id; align-self: center; }
     .uam__date         { grid-area: date; align-self: center; white-space: normal; }

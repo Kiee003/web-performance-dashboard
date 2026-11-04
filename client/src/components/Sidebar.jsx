@@ -5,9 +5,9 @@ import { useAuth } from '../context/AuthContext';
 import './Sidebar.css';
 
 const ROLE_CONFIG = {
-    admin:     { label: 'Admin',     color: '#f87171', bg: 'rgba(248,113,113,0.18)', icon: 'admin' },
-    moderator: { label: 'Moderator', color: '#fbbf24', bg: 'rgba(251,191,36,0.18)',  icon: 'mod' },
-    normal:    { label: 'User',      color: '#a5f3fc', bg: 'rgba(165,243,252,0.18)', icon: 'user' },
+    admin:     { label: 'Admin',     color: '#B42318', bg: '#FBE4E1', icon: 'admin' },
+    moderator: { label: 'Moderator', color: '#A15C07', bg: '#FCEFD3', icon: 'mod' },
+    normal:    { label: 'User',      color: '#0B5F58', bg: '#E1F2EE', icon: 'user' },
 };
 
 const ROLE_LEVEL = { normal: 1, moderator: 2, admin: 3 };
